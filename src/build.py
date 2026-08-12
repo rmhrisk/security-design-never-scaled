@@ -303,8 +303,6 @@ def h2(m):
     return out
 
 body = re.sub(r"<h2>(.*?)</h2>", h2, body, flags=re.S)
-body = body.replace("<h3>What this post does not establish</h3>",
-    '<h3 class="tail" id="limits">What this post does not establish</h3>')
 body = body.replace("<h3>Sources</h3>", '<h3 class="tail" id="sources">Sources</h3>')
 
 for token, fig in (("@@FIGH@@", FIGH), ("@@FIGI@@", FIGI), ("@@FIGK@@", FIGK),
@@ -318,7 +316,6 @@ def toc_row(n, sid, label):
     if n == "part":
         return '<li class="toc-part"><a href="#%s">%s</a></li>' % (sid, label)
     return '<li><a href="#%s"><span class="tocnum">%d</span>%s</a></li>' % (sid, n, label)
-toc.append(("part", "limits", "What this post does not establish"))
 toc.append(("part", "sources", "Sources"))
 toc_html = "\n".join(toc_row(*row) for row in toc)
 
