@@ -1,0 +1,41 @@
+name: Check
+
+# Deployment is branch-based (Settings -> Pages -> Deploy from a branch, / root),
+# so the committed index.html is always what is served and this workflow can never
+# take the site down. It only verifies that index.html is in sync with src/ and
+# that the figures have no layout regressions.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install markdown
+
+      - name: index.html must match a fresh build from src/
+        working-directory: src
+        run: |
+          cp ../index.html /tmp/committed.html
+          python build.py
+          if ! diff -q /tmp/committed.html ../index.html >/dev/null; then
+            echo "::error::index.html is stale. Run 'cd src && python build.py' and commit the result."
+            diff /tmp/committed.html ../index.html | head -40
+            exit 1
+          fi
+
+      - name: Figures must have no layout issues
+        working-directory: src
+        run: |
+          python lint_figs.py | tee /tmp/lint.txt
+          grep -q "^0 issue" /tmp/lint.txt
