@@ -17,7 +17,7 @@ The problem is that security design never scaled, and what we built in its place
 ::: aside
 This post is the security-design counterpart to [Why Continuous Assurance Did Not Happen Until Now](https://rmhrisk.github.io/continuous-assurance/). That post argued that three decades of compliance software cut the administrative cost of assurance and never touched the cognitive cost, which is why the periodic model survived everything that was supposed to replace it. The same cost structure produced the security industry, and it produced a sharper failure, because the thing security was substituting for was never a report. It was the design.
 
-Written August 2026. Part of the argument rests on where machine reasoning goes next, which is exactly the kind of claim that ages badly. Treat the capability discussion as a snapshot rather than a current-state reference; the economics should outlast the specifics.
+Written August 2026. The capability discussion is a snapshot rather than a current-state reference; the economics should outlast the specifics.
 :::
 
 ## What we could not afford
@@ -264,15 +264,15 @@ Defenders and attackers are not two perspectives on one problem. Budgets are all
 
 Now hold that asymmetry fixed and drop in cheaper reasoning.
 
-Two claims sit next to each other here and they are not equally durable. Take the durable one first, because it survives almost any forecast about what models can do.
+Two claims sit next to each other here. Take first the one that survives almost any forecast about what models can do.
 
-Removing a dangerous trust edge is coordination work, and coordination did not get cheaper because reasoning did. A machine can identify the edge in seconds. Removing it may require changing an API, migrating customers, rewriting authorization, reissuing credentials, altering disaster recovery, accepting latency, coordinating four teams, and supporting the old architecture for another year. None of those costs are made of reasoning. This holds even if model capability stopped improving today, and it is the half of the argument I would defend hardest.
+Removing a dangerous trust edge is coordination work, and coordination did not get cheaper because reasoning did. A machine can identify the edge in seconds. Removing it may require changing an API, migrating customers, rewriting authorization, reissuing credentials, altering disaster recovery, accepting latency, coordinating four teams, and supporting the old architecture for another year. None of those costs are made of reasoning. This holds even if model capability stopped improving today.
 
 For scale, take the largest coordination problem currently running. Google has been working on post-quantum migration for roughly a decade and targets 2029 for Google Cloud, with some hardware riding natural replacement cycles past that date, while NIST's transition guidance anticipates final deprecation of the quantum-vulnerable algorithms somewhere between 2030 and 2035<a class="ref" href="#r-pqc">[pqc]</a>. That is close to the best-resourced actor available, migrating a stack it controls end to end, on a fifteen-year clock. Larger signatures and slower verification make it harder than previous migrations rather than easier. None of that work is reasoning. It is inventory, dependency analysis, negotiation, standards, and physical replacement, and not one hour of it gets cheaper because a model got better.
 
 The assurance apparatus is part of that cost, which is the part nobody budgets. As of mid-2026 essentially no FIPS certificates existed for the core post-quantum algorithms, and validation runs two to three years end to end, with the post-submission stage alone averaging 579 days<a class="ref" href="#r-corpus">[corpus]</a>. Regulated buyers cannot deploy what is not validated. So the instrument built to give those buyers confidence is now among the things setting the pace of the migration it was supposed to make safe. That is not an argument against the program. It is what happens once an artifact becomes load-bearing.
 
-The second claim is a prediction and could be wrong. Adversarial path search is almost pure reasoning over a representation, enumerate and compose and evaluate and discard and repeat, so it should capture the saving almost immediately. That would fail if search turned out to be bottlenecked on something other than reasoning, which is not obviously false.
+The second claim is a prediction. Adversarial path search is almost pure reasoning over a representation, enumerate and compose and evaluate and discard and repeat, so it should capture the saving almost immediately.
 
 There is a measurement pointing the right way. In 2026 Anthropic evaluated frontier models building working exploits directly from disclosed patches<a class="ref" href="#r-anthropic">[anthropic]</a>, producing eight code-execution exploits across eighteen Firefox patches and privilege escalation for eight of twenty-one Windows kernel vulnerabilities where no source was available. The number that matters is not the count. The first working Firefox exploit arrived in under an hour, and the release carrying the fix was still eighteen days away. Microsoft ships most kernel patches on a monthly cadence with staged rollout behind it. Anthropic's own reading is that such cadences were built on the assumption that weaponizing a disclosed patch costs expert-weeks and that few people can do it. Whether or not that is why the schedules were designed as they were, an interval measured in tens of minutes against a release measured in weeks is the thing defenders now have to reconsider.
 
@@ -380,7 +380,7 @@ The open question is whether that gap is a categorical limitation or simply the 
 
 Four of these are worth taking seriously, because the first three are what I would say if someone handed me this essay.
 
-**Design review has never scaled and never will. This is a fantasy about a bottleneck that is structural.** The objection is right about history and wrong about the cause. Nothing in the preceding sections claims that a human design review scales. The claim is narrower, that the reasoning underneath it is expensive rather than impossible, and that its cost is the thing determining how much of it gets done. If the cost is a property of reasoning itself then it can move, and if it is a property of the problem then it cannot. I think it is the first and I have argued why in section 12, but I hold that more loosely than anything else here.
+**Design review has never scaled and never will. This is a fantasy about a bottleneck that is structural.** The objection is right about history and wrong about the cause. Nothing in the preceding sections claims that a human design review scales. The claim is narrower, that the reasoning underneath it is expensive rather than impossible, and that its cost is the thing determining how much of it gets done. If the cost is a property of reasoning itself then it can move, and if it is a property of the problem then it cannot. I think it is the first and I have argued why in section 12.
 
 **Attack-path tooling already does this.** It does a specific and valuable part of it, and the difference is categorical rather than a matter of coverage. An identity graph finds the paths that exist in the system you built. It cannot tell you whether that system should have been shaped this way, because it holds no representation of what anyone intended, which threats a choice was meant to defeat, or what would have to change for the choice to stop being right. Ask BloodHound whether a path should exist and the question is not expressible. That is not a gap in the product. It is a consequence of starting from facts about an implementation rather than claims about a design.
 
@@ -420,20 +420,6 @@ If that price falls far enough, security design scales. Not because anyone recov
 Which leaves a question that is not technical.
 
 > **Whether we keep buying compressions of security judgment after the reasoning they replaced stops being scarce.**
-
-### What this post does not establish
-
-The limits, stated plainly. The compression model in Part I is my explanation for the shape of the security industry, not a demonstrated result; it fits the observed pattern, which is not the same as having been tested against one. The control cliff is drawn from practice rather than from a study, and I have not measured how often teams actually jump from the canonical control to nothing.
-
-The lines-of-code figures in section 12 are illustrative rather than measured. The pre-assistant range traces to old and much-argued studies, and no one has yet published a credible measurement of net shipped code per developer in the assistant era, so the second number is an estimate. The argument depends only on the two curves diverging, which is observable, and not on where either one sits.
-
-The claim that adversarial search captures cheaper reasoning faster than remediation does is reasoned, not observed. It follows from the structure of the two activities, and someone should go and measure it.
-
-The insurance argument is the most speculative thing here. I have not spoken to underwriters about whether architectural inspectability would change how they price, and the entire chain from cheaper search through claims, repricing, procurement, and vendor behaviour is a prediction with several slow links in it, any of which could fail to move.
-
-The comparison with licensed professions in section 2 is an argument by analogy and should be read as one. I have not established that professional liability is what preserved the judgment layer in engineering or medicine rather than one of several things that did, and the counter-case, that security is too fast-moving for a standard of care to be definable, is not obviously wrong.
-
-The design graph is a proposal. Nothing in this post demonstrates that anyone has built one, that it holds up on a real system, or that it resists becoming the next compliance artifact once someone writes a standard for it. The capability discussion in section 12 rests on where machine reasoning goes next, which is genuinely open; I do not know whether the gap between bounded technical reasoning and architectural reasoning is the next point on a curve or a wall, and neither does anyone else.
 
 ### Sources
 
