@@ -1,0 +1,3 @@
+src/render/
+src/__pycache__/
+*.pyc
