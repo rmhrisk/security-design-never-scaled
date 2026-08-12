@@ -283,9 +283,9 @@ FIGG = '''
   <text class="d-tag b" x="640" y="286">integrated production change</text>
 
   <path class="d-gap" d="M905 96 V264"/>
-  <text class="d-gap-t" x="895" y="150" text-anchor="end">review, integration, debugging,</text>
-  <text class="d-gap-t" x="895" y="166" text-anchor="end">testing, and deciding whether</text>
-  <text class="d-gap-t" x="895" y="182" text-anchor="end">it should exist at all</text>
+  <text class="d-gap-t" x="895" y="200" text-anchor="end">review, integration, debugging,</text>
+  <text class="d-gap-t" x="895" y="216" text-anchor="end">testing, and deciding whether</text>
+  <text class="d-gap-t" x="895" y="232" text-anchor="end">it should exist at all</text>
 
   <text class="s-caption" x="530" y="382" text-anchor="middle">The gap is the judgment. It did not get cheaper when typing did.</text>
 </svg>
