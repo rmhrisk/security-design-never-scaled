@@ -1,0 +1,427 @@
+/* ============================================================
+   DESIGN TOKENS: swap these for the unmitigatedrisk palette
+   and everything below, including the SVG figures, follows.
+   ============================================================ */
+:root{
+  --paper:      #f4f5f6;
+  --panel:      #eaecee;
+  --ink:        #12171d;
+  --ink-soft:   #414c56;
+  --muted:      #78838d;
+  --rule:       #d3d8dc;
+  --accent:     #a3202a;   /* a path that remains reachable */
+  --removed:    #a4adb5;   /* an edge the design eliminated */
+  --affirm:     #17604f;   /* a property that holds */
+  --measure:    38rem;
+
+  --serif: "Source Serif 4", Georgia, serif;
+  --sans:  "IBM Plex Sans", system-ui, sans-serif;
+  --mono:  "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#101418; --panel:#191f25; --ink:#e6e9ec; --ink-soft:#b3bcc4;
+    --muted:#7d8993; --rule:#2b333b; --accent:#e0616a; --removed:#5d6771; --affirm:#4fb79c;
+  }
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--serif); font-size:18px; line-height:1.62;
+  font-optical-sizing:auto;
+}
+
+/* ---------------------------------------------------- masthead & hero --- */
+.masthead{
+  display:flex; justify-content:space-between; align-items:baseline;
+  padding:1.1rem clamp(1.1rem,5vw,3rem); border-bottom:1px solid var(--rule);
+  font-family:var(--mono); font-size:.72rem; letter-spacing:.11em; text-transform:uppercase;
+}
+.masthead .brand{color:var(--ink); text-decoration:none}
+.masthead .date{color:var(--muted)}
+
+main{padding:0 clamp(1.1rem,5vw,3rem)}
+.hero{max-width:var(--measure); margin:clamp(3rem,9vw,6rem) auto clamp(2rem,5vw,3.5rem)}
+h1{
+  font-family:var(--sans); font-weight:600; letter-spacing:-.024em;
+  font-size:clamp(2.3rem,6.4vw,3.9rem); line-height:1.04; margin:0 0 1.1rem;
+  text-wrap:balance;
+}
+.dek{
+  font-family:var(--sans); font-weight:400; color:var(--ink-soft);
+  font-size:clamp(1rem,2.2vw,1.14rem); line-height:1.5; margin:0;
+  border-left:2px solid var(--accent); padding-left:1rem; text-wrap:pretty;
+}
+
+/* ------------------------------------------------------------------ toc --- */
+.toc{
+  max-width:var(--measure); margin:0 auto clamp(3rem,7vw,4.5rem);
+  padding:1.4rem 1.5rem; background:var(--panel); border:1px solid var(--rule);
+}
+.toc h2{
+  font-family:var(--mono); font-size:.68rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--muted); margin:0 0 .9rem; font-weight:500;
+}
+.toc ol{list-style:none; margin:0; padding:0; columns:2; column-gap:2rem}
+@media (max-width:640px){ .toc ol{columns:1} }
+.toc li{margin:0 0 .42rem; break-inside:avoid}
+.toc a{
+  color:var(--ink-soft); text-decoration:none; font-family:var(--sans);
+  font-size:.87rem; line-height:1.35; display:flex; gap:.55rem; align-items:baseline;
+}
+.toc a:hover{color:var(--accent)}
+.tocnum{font-family:var(--mono); font-size:.72rem; color:var(--muted); min-width:1.1em}
+
+/* --------------------------------------------------------------- prose --- */
+.prose{max-width:var(--measure); margin:0 auto; padding-bottom:5rem}
+.prose > p, .prose > ul, .prose > ol, .prose > blockquote{text-wrap:pretty}
+.prose p{margin:0 0 1.15rem}
+.prose strong{font-weight:600}
+.prose a{color:var(--ink); text-decoration-color:var(--accent); text-underline-offset:3px}
+.prose a:hover{color:var(--accent)}
+.prose code{
+  font-family:var(--mono); font-size:.86em; background:var(--panel);
+  padding:.12em .38em; border:1px solid var(--rule);
+}
+.prose em{font-style:italic}
+
+.partbreak{
+  margin:clamp(3.4rem,8vw,5.2rem) 0 2.4rem; padding-top:1.5rem;
+  border-top:2px solid var(--ink);
+}
+.partnum{
+  display:block; font-family:var(--mono); font-size:.7rem; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--accent); margin-bottom:.5rem;
+}
+.partname{
+  font-family:var(--sans); font-weight:600; letter-spacing:-.02em;
+  font-size:clamp(1.75rem,4.4vw,2.4rem); line-height:1.1; margin:0;
+}
+h3.sec{
+  font-family:var(--sans); font-weight:600; letter-spacing:-.014em;
+  font-size:clamp(1.24rem,2.9vw,1.5rem); line-height:1.25;
+  margin:2.7rem 0 1.05rem; position:relative; padding-left:2.4rem; text-wrap:balance;
+}
+.secnum{
+  position:absolute; left:0; top:.12em; font-family:var(--mono); font-weight:400;
+  font-size:.82rem; color:var(--accent);
+}
+
+.prose blockquote{
+  margin:1.9rem 0; padding:1.15rem 1.35rem; background:var(--panel);
+  border-left:3px solid var(--accent); font-family:var(--sans);
+  font-size:1.02rem; line-height:1.5;
+}
+.prose blockquote p{margin:0}
+.prose blockquote p + p{margin-top:.7rem}
+
+/* ------------------------------------------------------------- figures --- */
+.fig{
+  max-width:var(--measure); margin:2.4rem auto; padding:0;
+}
+.fig svg{
+  display:block; width:100%; height:auto;
+  background:var(--panel); border:1px solid var(--rule); padding:.4rem;
+}
+.fig figcaption{
+  font-family:var(--sans); font-size:.83rem; line-height:1.45; color:var(--muted);
+  margin-top:.7rem; max-width:var(--measure);
+  margin-left:auto; margin-right:auto; text-wrap:pretty;
+}
+
+/* shared SVG grammar */
+svg text{font-family:var(--sans); fill:var(--ink)}
+.s-eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.13em; fill:var(--muted)}
+.s-eyebrow.accent{fill:var(--accent)}
+.s-owner text{font-family:var(--mono); font-size:11px; fill:var(--muted)}
+.s-tick path{stroke:var(--rule); stroke-width:1}
+.s-edgelabel text{font-family:var(--mono); font-size:10.5px; fill:var(--muted)}
+.s-node rect{fill:var(--paper); stroke:var(--ink-soft); stroke-width:1.25}
+.s-node rect.s-node-end{stroke:var(--accent); stroke-width:2}
+.s-node rect.s-node-alert{stroke:var(--accent); stroke-width:2; stroke-dasharray:5 3}
+.s-nodetext text{font-size:14px; fill:var(--ink)}
+.s-nodetext text.s-end, .s-nodetext text.s-alert{fill:var(--accent); font-weight:500}
+.s-path path{stroke:var(--accent); stroke-width:2; fill:none}
+.s-path .s-head path{fill:var(--accent); stroke:none}
+.s-brace{stroke:var(--accent); stroke-width:1.5; fill:none}
+.s-caption{font-size:15px; font-weight:600; fill:var(--accent)}
+.s-sub{font-size:12.5px; fill:var(--muted)}
+.s-prop{font-size:16px; font-weight:600; fill:var(--ink)}
+.s-colhead text{font-family:var(--mono); font-size:10.5px; fill:var(--muted)}
+.s-rowlabel text{font-size:14px; fill:var(--ink)}
+.s-rule{stroke:var(--rule); stroke-width:1}
+.s-rule.faint{stroke:var(--rule); stroke-dasharray:3 3}
+.s-cell circle.on{fill:var(--accent); stroke:none}
+.s-cell circle.off{fill:none; stroke:var(--removed); stroke-width:1.5; stroke-dasharray:3 2.5}
+.s-cost rect{fill:var(--ink-soft)}
+.s-cost rect.s-cost-alt{fill:var(--affirm)}
+.s-legend text{font-family:var(--mono); font-size:11px; fill:var(--muted)}
+.s-legend circle.on{fill:var(--accent)}
+.s-legend circle.off{fill:none; stroke:var(--removed); stroke-width:1.5; stroke-dasharray:3 2.5}
+.s-flow path{stroke:var(--ink-soft); stroke-width:1.75; fill:none}
+.s-flow .s-head path{fill:var(--ink-soft); stroke:none}
+.s-flow.back path{stroke:var(--accent)}
+.s-flow.back .s-head path{fill:var(--accent)}
+.s-flowlabel{font-family:var(--mono); font-size:11px; fill:var(--accent)}
+
+/* ---------------------------------------------------------------- foot --- */
+.foot{
+  border-top:1px solid var(--rule); padding:1.6rem clamp(1.1rem,5vw,3rem);
+  font-family:var(--mono); font-size:.72rem; letter-spacing:.06em; color:var(--muted);
+}
+.foot a{color:var(--muted)}
+
+:where(a):focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+
+.snapshot{
+  max-width:var(--measure); margin:0 auto 2.4rem; padding-left:1rem;
+  border-left:1px solid var(--rule); font-size:.92rem; font-style:italic;
+  line-height:1.55; color:var(--muted); text-wrap:pretty;
+}
+
+/* ------------------------------------------------- hero figure & extras --- */
+.hero-fig{max-width:var(--measure); margin:0 auto 2.6rem}
+.hero-fig svg{
+  display:block; width:100%; height:auto;
+  background:var(--panel); border:1px solid var(--rule); padding:.4rem;
+}
+.hero-fig figcaption{
+  font-family:var(--sans); font-size:.86rem; line-height:1.45;
+  color:var(--ink-soft); margin-top:.7rem; text-wrap:pretty;
+}
+.s-panelhead{font-family:var(--mono); font-size:11.5px; letter-spacing:.11em; fill:var(--ink)}
+.h-graph path.dim{stroke:var(--rule); stroke-width:1.25; fill:none}
+.h-graph path.live{stroke:var(--accent); stroke-width:2.5; fill:none}
+.h-graph path.live-head{fill:var(--accent); stroke:none}
+.h-graph circle.dim{fill:var(--rule)}
+.h-graph circle.on{fill:var(--accent)}
+.h-graph circle.end{fill:var(--accent); stroke:var(--paper); stroke-width:2.5}
+.h-tag{font-family:var(--mono); font-size:11px; fill:var(--muted)}
+.h-arrow path{stroke:var(--muted); stroke-width:1.5; fill:none}
+.h-arrow .h-fill{fill:var(--muted); stroke:none}
+.h-arrow text{font-family:var(--mono); font-size:11px; fill:var(--muted)}
+.h-token rect{fill:var(--paper); stroke:var(--rule); stroke-width:1}
+.h-token text{font-size:13px; fill:var(--muted)}
+.h-token text.tick{font-family:var(--mono); font-size:11px; fill:var(--affirm)}
+.h-under{stroke:var(--rule); stroke-width:1}
+.h-verdict{font-family:var(--sans); font-size:16px; font-weight:600; fill:var(--accent)}
+
+.keylesson{
+  margin:1.9rem 0; padding:1.05rem 1.3rem;
+  background:var(--panel); border-top:2px solid var(--affirm);
+  font-family:var(--sans); font-size:.96rem; line-height:1.5;
+}
+.keylesson span{
+  display:block; font-family:var(--mono); font-size:.66rem; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--affirm); margin-bottom:.5rem;
+}
+.keylesson p{margin:0}
+
+.toc li.toc-part{margin-top:.7rem; break-inside:avoid}
+.toc li.toc-part:first-child{margin-top:0}
+.toc li.toc-part a{
+  font-family:var(--mono); font-size:.7rem; letter-spacing:.11em; text-transform:uppercase;
+  color:var(--accent); font-weight:500;
+}
+
+h3.tail{
+  font-family:var(--sans); font-weight:600; font-size:1.18rem;
+  margin:3rem 0 1rem; padding-top:1.3rem; border-top:1px solid var(--rule);
+}
+.prose h3.tail + p, #sources + ol{font-size:.94rem}
+#sources + ol{padding-left:1.4rem; color:var(--ink-soft)}
+#sources + ol li{margin-bottom:.55rem; line-height:1.5}
+
+.foot .related{margin:0 0 .5rem; line-height:1.7; text-transform:none; letter-spacing:0}
+.foot .related a{color:var(--ink-soft)}
+
+/* ------------------------------------------------ shared figure grammar --- */
+.d-outer rect{fill:none; stroke:var(--rule); stroke-width:1.25; stroke-dasharray:5 4}
+.d-outerlabel text{font-family:var(--mono); font-size:10.5px; letter-spacing:.11em; fill:var(--muted)}
+.d-outertext text{font-size:12.5px; fill:var(--ink-soft)}
+.d-inner rect{fill:var(--paper); stroke:var(--ink-soft); stroke-width:1.5}
+.d-innertext text{font-size:14px; fill:var(--ink)}
+.d-innertext text.sm{font-family:var(--mono); font-size:10.5px; fill:var(--muted)}
+.d-miss path{stroke:var(--accent); stroke-width:1.5; fill:none}
+.d-miss path.head{fill:var(--accent); stroke:none}
+.d-misslabel text{font-family:var(--mono); font-size:11px; fill:var(--accent)}
+
+.d-axis path{stroke:var(--ink-soft); stroke-width:1.25; fill:none}
+.d-axlabel{font-family:var(--mono); font-size:11px; fill:var(--muted)}
+.d-line-a{stroke:var(--accent); stroke-width:2.25; fill:none}
+.d-line-b{stroke:var(--ink-soft); stroke-width:2.25; fill:none; stroke-dasharray:6 4}
+.d-line-b.steep{stroke:var(--accent); stroke-dasharray:none}
+.d-line-a.flat{stroke:var(--ink-soft); stroke-dasharray:none}
+.d-tag{font-family:var(--mono); font-size:11px}
+.d-tag.a{fill:var(--accent)} .d-tag.b{fill:var(--ink-soft)}
+.d-line-a.flat ~ .d-tag.a{fill:var(--ink-soft)}
+.d-marks circle{fill:var(--removed)}
+.d-marks circle.hit{fill:var(--accent)}
+.d-pt text{font-family:var(--mono); font-size:11px; fill:var(--muted)}
+.d-zone{stroke:var(--accent); stroke-width:1; fill:none; stroke-dasharray:3 3}
+.d-zone-t{font-family:var(--mono); font-size:11.5px; fill:var(--accent)}
+.d-fill{fill:var(--accent); opacity:.10; stroke:none}
+.d-gap{stroke:var(--accent); stroke-width:1; stroke-dasharray:3 3}
+.d-gap-t{font-family:var(--mono); font-size:11px; fill:var(--accent)}
+
+.d-stair path{stroke:var(--ink-soft); stroke-width:1.5; fill:none}
+.d-step text{font-family:var(--mono); font-size:11px; fill:var(--muted)}
+.d-artifact text{font-size:14px; font-weight:600; fill:var(--ink)}
+.d-cont{stroke:var(--accent); stroke-width:1.5; fill:none; stroke-dasharray:5 4}
+.d-cont-h{fill:var(--accent); stroke:none}
+.d-cont-t{font-family:var(--mono); font-size:11px; fill:var(--accent)}
+
+.d-broken{stroke:var(--removed); stroke-width:2; stroke-dasharray:4 7; fill:none}
+.d-x path{stroke:var(--accent); stroke-width:2.5}
+.d-drop{stroke:var(--accent); stroke-width:1; stroke-dasharray:3 3}
+.d-panel rect{fill:var(--paper); stroke:var(--accent); stroke-width:1.25}
+.d-panel-h{font-family:var(--mono); font-size:10.5px; letter-spacing:.11em; fill:var(--accent)}
+.d-panel-t text{font-size:13.5px; fill:var(--ink)}
+.d-panel-t text.ok{font-family:var(--mono); font-size:11px; fill:var(--affirm)}
+.d-panel-t text.no{font-family:var(--mono); font-size:11px; fill:var(--accent)}
+.d-panel-rule{stroke:var(--rule); stroke-width:1}
+
+.d-rung rect{fill:var(--paper); stroke:var(--rule); stroke-width:1.25}
+.d-rung rect.top{stroke:var(--accent); stroke-width:2}
+.d-rungtext text{font-size:14px; fill:var(--ink-soft)}
+.d-rungtext text.sm{font-family:var(--mono); font-size:11px; fill:var(--muted)}
+.d-rungtext text.hi{fill:var(--accent); font-weight:600}
+.d-cut{stroke:var(--accent); stroke-width:1.5; stroke-dasharray:7 4}
+.d-cut-t{font-family:var(--mono); font-size:11px; fill:var(--accent)}
+.d-brace path{stroke:var(--rule); stroke-width:1.25; fill:none}
+.d-side{font-family:var(--mono); font-size:11.5px; fill:var(--accent)}
+.d-side.muted{fill:var(--muted)}
+
+.prose p.lede{
+  font-family:var(--sans); font-weight:500; color:var(--ink);
+  font-size:clamp(1.28rem,3.1vw,1.62rem); line-height:1.34; letter-spacing:-.014em;
+  margin:0 0 2rem; padding:1.35rem 0 1.5rem;
+  border-top:2px solid var(--accent); border-bottom:1px solid var(--rule);
+  text-wrap:balance;
+}
+
+a.ref{
+  font-family:var(--mono); font-size:.68em; font-weight:500;
+  text-decoration:none; color:var(--accent);
+  vertical-align:.42em; padding-left:.12em; letter-spacing:-.02em;
+}
+a.ref:hover{text-decoration:underline}
+ol.srclist li:target{
+  background:var(--panel); outline:2px solid var(--accent); outline-offset:5px;
+}
+#sources + p{font-size:.86rem; color:var(--muted); font-style:italic; margin-bottom:1rem}
+#sources + p + ol, ol.srclist{padding-left:1.4rem; color:var(--ink-soft)}
+ol.srclist li{margin-bottom:.6rem; line-height:1.5; scroll-margin-top:2rem}
+ol.srclist li a{color:var(--ink); text-decoration-color:var(--accent)}
+
+/* compression anatomy */
+.c-src rect{fill:var(--paper); stroke:var(--ink-soft); stroke-width:1.25}
+.c-head{font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; fill:var(--ink)}
+.c-item text{font-size:13.5px; fill:var(--ink-soft)}
+.c-keep path{stroke:var(--affirm); stroke-width:1.75; fill:none}
+.c-keep path.head{fill:var(--affirm); stroke:none}
+.c-keep text{font-family:var(--mono); font-size:11px; fill:var(--affirm)}
+.c-rule rect{fill:var(--paper); stroke:var(--affirm); stroke-width:2}
+.c-ruletext{font-size:16px; font-weight:600; fill:var(--ink)}
+.c-good{font-family:var(--mono); font-size:11px; fill:var(--affirm)}
+.c-drop path{stroke:var(--accent); stroke-width:1.75; fill:none; stroke-dasharray:5 4}
+.c-drop path.head{fill:var(--accent); stroke:none; stroke-dasharray:none}
+.c-drop text{font-family:var(--mono); font-size:11px; fill:var(--accent)}
+.c-dropbox rect{fill:none; stroke:var(--accent); stroke-width:1.25; stroke-dasharray:5 4}
+.c-drophead{font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; fill:var(--accent)}
+.c-dropitem text{font-size:13.5px; fill:var(--ink)}
+
+/* legibility plane */
+.p-zone{fill:var(--ink-soft); opacity:.09}
+.p-zone.want{fill:var(--accent); opacity:.10}
+.p-pt circle{fill:var(--ink-soft)}
+.p-pt text{font-size:13px; fill:var(--ink-soft)}
+.p-pt.want circle{fill:var(--accent)}
+.p-zonelabel{font-family:var(--mono); font-size:10.5px; letter-spacing:.11em; fill:var(--muted)}
+.p-zonelabel.want{fill:var(--accent)}
+.p-want{font-size:14px; fill:var(--ink)}
+.p-arrow{stroke:var(--accent); stroke-width:1.25; fill:none; stroke-dasharray:4 4}
+.p-arrowlabel{font-family:var(--mono); font-size:11px; fill:var(--accent)}
+
+/* rule timeline */
+.t-band rect{fill:var(--accent); opacity:.16; stroke:var(--accent); stroke-width:1.25}
+.t-bandtext{font-size:13.5px; fill:var(--ink); font-weight:500}
+.t-exempt rect{fill:var(--paper); stroke:var(--removed); stroke-width:1.25; stroke-dasharray:4 3}
+.t-exempttext{font-family:var(--mono); font-size:11px; fill:var(--muted)}
+.t-tick path{stroke:var(--ink-soft); stroke-width:1.25}
+.t-year text{font-family:var(--mono); font-size:11.5px; fill:var(--ink-soft)}
+.t-note text{font-family:var(--mono); font-size:11px; fill:var(--accent)}
+.t-open rect{fill:none; stroke:var(--removed); stroke-width:1.25; stroke-dasharray:6 4}
+.t-opentext{font-family:var(--mono); font-size:11px; fill:var(--muted)}
+
+.prose .aside{
+  margin:2.2rem 0; padding:1.1rem 1.3rem;
+  border-left:2px solid var(--rule); background:transparent;
+  font-size:.93rem; line-height:1.55; color:var(--muted);
+}
+.prose .aside p{margin:0 0 .7rem}
+.prose .aside p:last-child{margin:0}
+.prose .aside a{color:var(--ink-soft); text-decoration-color:var(--muted)}
+
+/* wide figures stay legible on narrow viewports */
+@media (max-width:760px){
+  .fig{width:auto; margin-left:0; margin-right:0; overflow-x:auto; -webkit-overflow-scrolling:touch}
+  .fig svg{min-width:680px}
+  .hero-fig{overflow-x:auto; -webkit-overflow-scrolling:touch}
+  .hero-fig svg{min-width:680px}
+  .fig figcaption, .hero-fig figcaption{position:sticky; left:0}
+  .fig figcaption::before{
+    content:"Scroll the figure sideways. "; font-family:var(--mono);
+    font-size:.72rem; letter-spacing:.04em; color:var(--accent);
+  }
+}
+@media (prefers-color-scheme: dark){
+  :root{--rule:#39434c; --removed:#7a858f}
+  .s-cell circle.off, .s-legend circle.off{stroke-width:1.75}
+  .d-fill{opacity:.16}
+  .p-zone{opacity:.14}
+}
+
+.partgist{
+  font-family:var(--sans); font-size:.95rem; line-height:1.45; color:var(--ink-soft);
+  margin:.7rem 0 0; max-width:32rem; text-wrap:pretty;
+}
+
+.keylesson p:first-child{margin:0}
+.keylesson p:first-child + p{margin-top:0}
+
+.w-head{font-family:var(--mono); font-size:11px; letter-spacing:.11em; fill:var(--ink)}
+.w-box rect{fill:none; stroke:var(--ink-soft); stroke-width:1.25}
+.w-box rect.hot{stroke:var(--accent); stroke-width:2}
+.w-inner rect{fill:var(--paper); stroke:var(--rule); stroke-width:1}
+.w-text text{font-size:13.5px; fill:var(--ink)}
+.w-text text.hot{fill:var(--accent); font-weight:600}
+.w-text text.sm{font-family:var(--mono); font-size:10.5px; fill:var(--muted)}
+.w-link path{stroke:var(--ink-soft); stroke-width:1.25; stroke-dasharray:4 3}
+.w-verdict{font-family:var(--sans); font-size:13.5px; font-weight:600; fill:var(--accent)}
+.w-colhead{font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; fill:var(--muted)}
+.w-cmp text{font-size:13.5px; fill:var(--ink-soft)}
+.w-cmp text.yes{fill:var(--accent); font-weight:500}
+.w-cmp text.no{fill:var(--affirm)}
+.w-cmp text.part{fill:var(--muted)}
+
+/* ----------------------------------------------------- check your understanding --- */
+.quiz{max-width:var(--measure); margin:0 auto; padding-bottom:5rem}
+.quiz .qintro{font-family:var(--sans); font-size:.94rem; color:var(--muted); margin:0 0 1.1rem}
+#qbox{border:1px solid var(--rule); border-radius:12px; padding:1.4rem 1.5rem; background:var(--panel)}
+.q-progress{font-family:var(--mono); font-weight:500; font-size:.66rem; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-bottom:.9rem}
+.q-question{font-family:var(--sans); font-weight:600; font-size:1.05rem; line-height:1.4; margin-bottom:1rem}
+.q-opt{display:block; width:100%; text-align:left; font-family:var(--sans); font-size:.94rem; color:var(--ink); padding:.62rem .85rem; margin-bottom:.5rem; border:1px solid var(--rule); border-radius:8px; background:var(--paper); cursor:pointer}
+.q-opt:hover:not(:disabled){border-color:var(--accent)}
+.q-opt:disabled{cursor:default}
+.q-opt.correct{border-color:var(--affirm); background:color-mix(in srgb, var(--affirm) 14%, var(--paper))}
+.q-opt.wrong{border-color:var(--accent); background:color-mix(in srgb, var(--accent) 14%, var(--paper))}
+.q-explain{font-family:var(--serif); font-style:italic; font-size:.9rem; line-height:1.55; color:var(--muted); margin:.75rem 0 1rem}
+.qbtn{font-family:var(--sans); font-weight:600; font-size:.88rem; color:#fff; background:var(--accent); border:0; border-radius:8px; padding:.62rem 1.35rem; cursor:pointer}
+.q-score{font-family:var(--sans); font-weight:700; font-size:1.4rem; margin-bottom:.35rem}
+.q-verdict{font-family:var(--serif); font-style:italic; font-size:1rem; color:var(--muted); margin-bottom:1.1rem}
+.q-opt.sel{border-color:var(--ink-soft); background:color-mix(in srgb, var(--ink-soft) 14%, var(--paper))}
+.qbtn:disabled{opacity:.45; cursor:default}

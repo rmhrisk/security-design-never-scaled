@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Security Design Never Scaled</title>
+<meta name="description" content="Two services, one bug, every instrument calling them identical. We scaled security's answers but never the reasoning behind them, and machine reasoning may finally change that.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   DESIGN TOKENS: swap these for the unmitigatedrisk palette
+   and everything below, including the SVG figures, follows.
+   ============================================================ */
+:root{
+  --paper:      #f4f5f6;
+  --panel:      #eaecee;
+  --ink:        #12171d;
+  --ink-soft:   #414c56;
+  --muted:      #78838d;
+  --rule:       #d3d8dc;
+  --accent:     #a3202a;   /* a path that remains reachable */
+  --removed:    #a4adb5;   /* an edge the design eliminated */
+  --affirm:     #17604f;   /* a property that holds */
+  --measure:    38rem;
+
+  --serif: "Source Serif 4", Georgia, serif;
+  --sans:  "IBM Plex Sans", system-ui, sans-serif;
+  --mono:  "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#101418; --panel:#191f25; --ink:#e6e9ec; --ink-soft:#b3bcc4;
+    --muted:#7d8993; --rule:#2b333b; --accent:#e0616a; --removed:#5d6771; --affirm:#4fb79c;
+  }
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--serif); font-size:18px; line-height:1.62;
+  font-optical-sizing:auto;
+}
+
+/* ---------------------------------------------------- masthead & hero --- */
+.masthead{
+  display:flex; justify-content:space-between; align-items:baseline;
+  padding:1.1rem clamp(1.1rem,5vw,3rem); border-bottom:1px solid var(--rule);
+  font-family:var(--mono); font-size:.72rem; letter-spacing:.11em; text-transform:uppercase;
+}
+.masthead .brand{color:var(--ink); text-decoration:none}
+.masthead .date{color:var(--muted)}
+
+main{padding:0 clamp(1.1rem,5vw,3rem)}
+.hero{max-width:var(--measure); margin:clamp(3rem,9vw,6rem) auto clamp(2rem,5vw,3.5rem)}
+h1{
+  font-family:var(--sans); font-weight:600; letter-spacing:-.024em;
+  font-size:clamp(2.3rem,6.4vw,3.9rem); line-height:1.04; margin:0 0 1.1rem;
+  text-wrap:balance;
+}
+.dek{
+  font-family:var(--sans); font-weight:400; color:var(--ink-soft);
+  font-size:clamp(1rem,2.2vw,1.14rem); line-height:1.5; margin:0;
+  border-left:2px solid var(--accent); padding-left:1rem; text-wrap:pretty;
+}
+
+/* ------------------------------------------------------------------ toc --- */
+.toc{
+  max-width:var(--measure); margin:0 auto clamp(3rem,7vw,4.5rem);
+  padding:1.4rem 1.5rem; background:var(--panel); border:1px solid var(--rule);
+}
+.toc h2{
+  font-family:var(--mono); font-size:.68rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--muted); margin:0 0 .9rem; font-weight:500;
+}
+.toc ol{list-style:none; margin:0; padding:0; columns:2; column-gap:2rem}
+@media (max-width:640px){ .toc ol{columns:1} }
+.toc li{margin:0 0 .42rem; break-inside:avoid}
+.toc a{
+  color:var(--ink-soft); text-decoration:none; font-family:var(--sans);
+  font-size:.87rem; line-height:1.35; display:flex; gap:.55rem; align-items:baseline;
+}
+.toc a:hover{color:var(--accent)}
+.tocnum{font-family:var(--mono); font-size:.72rem; color:var(--muted); min-width:1.1em}
+
+/* --------------------------------------------------------------- prose --- */
+.prose{max-width:var(--measure); margin:0 auto; padding-bottom:5rem}
+.prose > p, .prose > ul, .prose > ol, .prose > blockquote{text-wrap:pretty}
+.prose p{margin:0 0 1.15rem}
+.prose strong{font-weight:600}
+.prose a{color:var(--ink); text-decoration-color:var(--accent); text-underline-offset:3px}
+.prose a:hover{color:var(--accent)}
+.prose code{
+  font-family:var(--mono); font-size:.86em; background:var(--panel);
+  padding:.12em .38em; border:1px solid var(--rule);
+}
+.prose em{font-style:italic}
+
+.partbreak{
+  margin:clamp(3.4rem,8vw,5.2rem) 0 2.4rem; padding-top:1.5rem;
+  border-top:2px solid var(--ink);
+}
+.partnum{
+  display:block; font-family:var(--mono); font-size:.7rem; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--accent); margin-bottom:.5rem;
+}
+.partname{
+  font-family:var(--sans); font-weight:600; letter-spacing:-.02em;
+  font-size:clamp(1.75rem,4.4vw,2.4rem); line-height:1.1; margin:0;
+}
+h3.sec{
+  font-family:var(--sans); font-weight:600; letter-spacing:-.014em;
+  font-size:clamp(1.24rem,2.9vw,1.5rem); line-height:1.25;
+  margin:2.7rem 0 1.05rem; position:relative; padding-left:2.4rem; text-wrap:balance;
+}
+.secnum{
+  position:absolute; left:0; top:.12em; font-family:var(--mono); font-weight:400;
+  font-size:.82rem; color:var(--accent);
+}
+
+.prose blockquote{
+  margin:1.9rem 0; padding:1.15rem 1.35rem; background:var(--panel);
+  border-left:3px solid var(--accent); font-family:var(--sans);
+  font-size:1.02rem; line-height:1.5;
+}
+.prose blockquote p{margin:0}
+.prose blockquote p + p{margin-top:.7rem}
+
+/* ------------------------------------------------------------- figures --- */
+.fig{
+  max-width:var(--measure); margin:2.4rem auto; padding:0;
+}
+.fig svg{
+  display:block; width:100%; height:auto;
+  background:var(--panel); border:1px solid var(--rule); padding:.4rem;
+}
+.fig figcaption{
+  font-family:var(--sans); font-size:.83rem; line-height:1.45; color:var(--muted);
+  margin-top:.7rem; max-width:var(--measure);
+  margin-left:auto; margin-right:auto; text-wrap:pretty;
+}
+
+/* shared SVG grammar */
+svg text{font-family:var(--sans); fill:var(--ink)}
+.s-eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.13em; fill:var(--muted)}
+.s-eyebrow.accent{fill:var(--accent)}
+.s-owner text{font-family:var(--mono); font-size:11px; fill:var(--muted)}
+.s-tick path{stroke:var(--rule); stroke-width:1}
+.s-edgelabel text{font-family:var(--mono); font-size:10.5px; fill:var(--muted)}
+.s-node rect{fill:var(--paper); stroke:var(--ink-soft); stroke-width:1.25}
+.s-node rect.s-node-end{stroke:var(--accent); stroke-width:2}
+.s-node rect.s-node-alert{stroke:var(--accent); stroke-width:2; stroke-dasharray:5 3}
+.s-nodetext text{font-size:14px; fill:var(--ink)}
+.s-nodetext text.s-end, .s-nodetext text.s-alert{fill:var(--accent); font-weight:500}
+.s-path path{stroke:var(--accent); stroke-width:2; fill:none}
+.s-path .s-head path{fill:var(--accent); stroke:none}
+.s-brace{stroke:var(--accent); stroke-width:1.5; fill:none}
+.s-caption{font-size:15px; font-weight:600; fill:var(--accent)}
+.s-sub{font-size:12.5px; fill:var(--muted)}
+.s-prop{font-size:16px; font-weight:600; fill:var(--ink)}
+.s-colhead text{font-family:var(--mono); font-size:10.5px; fill:var(--muted)}
+.s-rowlabel text{font-size:14px; fill:var(--ink)}
+.s-rule{stroke:var(--rule); stroke-width:1}
+.s-rule.faint{stroke:var(--rule); stroke-dasharray:3 3}
+.s-cell circle.on{fill:var(--accent); stroke:none}
+.s-cell circle.off{fill:none; stroke:var(--removed); stroke-width:1.5; stroke-dasharray:3 2.5}
+.s-cost rect{fill:var(--ink-soft)}
+.s-cost rect.s-cost-alt{fill:var(--affirm)}
+.s-legend text{font-family:var(--mono); font-size:11px; fill:var(--muted)}
+.s-legend circle.on{fill:var(--accent)}
+.s-legend circle.off{fill:none; stroke:var(--removed); stroke-width:1.5; stroke-dasharray:3 2.5}
+.s-flow path{stroke:var(--ink-soft); stroke-width:1.75; fill:none}
+.s-flow .s-head path{fill:var(--ink-soft); stroke:none}
+.s-flow.back path{stroke:var(--accent)}
+.s-flow.back .s-head path{fill:var(--accent)}
+.s-flowlabel{font-family:var(--mono); font-size:11px; fill:var(--accent)}
+
+/* ---------------------------------------------------------------- foot --- */
+.foot{
+  border-top:1px solid var(--rule); padding:1.6rem clamp(1.1rem,5vw,3rem);
+  font-family:var(--mono); font-size:.72rem; letter-spacing:.06em; color:var(--muted);
+}
+.foot a{color:var(--muted)}
+
+:where(a):focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+
+.snapshot{
+  max-width:var(--measure); margin:0 auto 2.4rem; padding-left:1rem;
+  border-left:1px solid var(--rule); font-size:.92rem; font-style:italic;
+  line-height:1.55; color:var(--muted); text-wrap:pretty;
+}
+
+/* ------------------------------------------------- hero figure & extras --- */
+.hero-fig{max-width:var(--measure); margin:0 auto 2.6rem}
+.hero-fig svg{
+  display:block; width:100%; height:auto;
+  background:var(--panel); border:1px solid var(--rule); padding:.4rem;
+}
+.hero-fig figcaption{
+  font-family:var(--sans); font-size:.86rem; line-height:1.45;
+  color:var(--ink-soft); margin-top:.7rem; text-wrap:pretty;
+}
+.s-panelhead{font-family:var(--mono); font-size:11.5px; letter-spacing:.11em; fill:var(--ink)}
+.h-graph path.dim{stroke:var(--rule); stroke-width:1.25; fill:none}
+.h-graph path.live{stroke:var(--accent); stroke-width:2.5; fill:none}
+.h-graph path.live-head{fill:var(--accent); stroke:none}
+.h-graph circle.dim{fill:var(--rule)}
+.h-graph circle.on{fill:var(--accent)}
+.h-graph circle.end{fill:var(--accent); stroke:var(--paper); stroke-width:2.5}
+.h-tag{font-family:var(--mono); font-size:11px; fill:var(--muted)}
+.h-arrow path{stroke:var(--muted); stroke-width:1.5; fill:none}
+.h-arrow .h-fill{fill:var(--muted); stroke:none}
+.h-arrow text{font-family:var(--mono); font-size:11px; fill:var(--muted)}
+.h-token rect{fill:var(--paper); stroke:var(--rule); stroke-width:1}
+.h-token text{font-size:13px; fill:var(--muted)}
+.h-token text.tick{font-family:var(--mono); font-size:11px; fill:var(--affirm)}
+.h-under{stroke:var(--rule); stroke-width:1}
+.h-verdict{font-family:var(--sans); font-size:16px; font-weight:600; fill:var(--accent)}
+
+.keylesson{
+  margin:1.9rem 0; padding:1.05rem 1.3rem;
+  background:var(--panel); border-top:2px solid var(--affirm);
+  font-family:var(--sans); font-size:.96rem; line-height:1.5;
+}
+.keylesson span{
+  display:block; font-family:var(--mono); font-size:.66rem; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--affirm); margin-bottom:.5rem;
+}
+.keylesson p{margin:0}
+
+.toc li.toc-part{margin-top:.7rem; break-inside:avoid}
+.toc li.toc-part:first-child{margin-top:0}
+.toc li.toc-part a{
+  font-family:var(--mono); font-size:.7rem; letter-spacing:.11em; text-transform:uppercase;
+  color:var(--accent); font-weight:500;
+}
+
+h3.tail{
+  font-family:var(--sans); font-weight:600; font-size:1.18rem;
+  margin:3rem 0 1rem; padding-top:1.3rem; border-top:1px solid var(--rule);
+}
+.prose h3.tail + p, #sources + ol{font-size:.94rem}
+#sources + ol{padding-left:1.4rem; color:var(--ink-soft)}
+#sources + ol li{margin-bottom:.55rem; line-height:1.5}
+
+.foot .related{margin:0 0 .5rem; line-height:1.7; text-transform:none; letter-spacing:0}
+.foot .related a{color:var(--ink-soft)}
+
+/* ------------------------------------------------ shared figure grammar --- */
+.d-outer rect{fill:none; stroke:var(--rule); stroke-width:1.25; stroke-dasharray:5 4}
+.d-outerlabel text{font-family:var(--mono); font-size:10.5px; letter-spacing:.11em; fill:var(--muted)}
+.d-outertext text{font-size:12.5px; fill:var(--ink-soft)}
+.d-inner rect{fill:var(--paper); stroke:var(--ink-soft); stroke-width:1.5}
+.d-innertext text{font-size:14px; fill:var(--ink)}
+.d-innertext text.sm{font-family:var(--mono); font-size:10.5px; fill:var(--muted)}
+.d-miss path{stroke:var(--accent); stroke-width:1.5; fill:none}
+.d-miss path.head{fill:var(--accent); stroke:none}
+.d-misslabel text{font-family:var(--mono); font-size:11px; fill:var(--accent)}
+
+.d-axis path{stroke:var(--ink-soft); stroke-width:1.25; fill:none}
+.d-axlabel{font-family:var(--mono); font-size:11px; fill:var(--muted)}
+.d-line-a{stroke:var(--accent); stroke-width:2.25; fill:none}
+.d-line-b{stroke:var(--ink-soft); stroke-width:2.25; fill:none; stroke-dasharray:6 4}
+.d-line-b.steep{stroke:var(--accent); stroke-dasharray:none}
+.d-line-a.flat{stroke:var(--ink-soft); stroke-dasharray:none}
+.d-tag{font-family:var(--mono); font-size:11px}
+.d-tag.a{fill:var(--accent)} .d-tag.b{fill:var(--ink-soft)}
+.d-line-a.flat ~ .d-tag.a{fill:var(--ink-soft)}
+.d-marks circle{fill:var(--removed)}
+.d-marks circle.hit{fill:var(--accent)}
+.d-pt text{font-family:var(--mono); font-size:11px; fill:var(--muted)}
+.d-zone{stroke:var(--accent); stroke-width:1; fill:none; stroke-dasharray:3 3}
+.d-zone-t{font-family:var(--mono); font-size:11.5px; fill:var(--accent)}
+.d-fill{fill:var(--accent); opacity:.10; stroke:none}
+.d-gap{stroke:var(--accent); stroke-width:1; stroke-dasharray:3 3}
+.d-gap-t{font-family:var(--mono); font-size:11px; fill:var(--accent)}
+
+.d-stair path{stroke:var(--ink-soft); stroke-width:1.5; fill:none}
+.d-step text{font-family:var(--mono); font-size:11px; fill:var(--muted)}
+.d-artifact text{font-size:14px; font-weight:600; fill:var(--ink)}
+.d-cont{stroke:var(--accent); stroke-width:1.5; fill:none; stroke-dasharray:5 4}
+.d-cont-h{fill:var(--accent); stroke:none}
+.d-cont-t{font-family:var(--mono); font-size:11px; fill:var(--accent)}
+
+.d-broken{stroke:var(--removed); stroke-width:2; stroke-dasharray:4 7; fill:none}
+.d-x path{stroke:var(--accent); stroke-width:2.5}
+.d-drop{stroke:var(--accent); stroke-width:1; stroke-dasharray:3 3}
+.d-panel rect{fill:var(--paper); stroke:var(--accent); stroke-width:1.25}
+.d-panel-h{font-family:var(--mono); font-size:10.5px; letter-spacing:.11em; fill:var(--accent)}
+.d-panel-t text{font-size:13.5px; fill:var(--ink)}
+.d-panel-t text.ok{font-family:var(--mono); font-size:11px; fill:var(--affirm)}
+.d-panel-t text.no{font-family:var(--mono); font-size:11px; fill:var(--accent)}
+.d-panel-rule{stroke:var(--rule); stroke-width:1}
+
+.d-rung rect{fill:var(--paper); stroke:var(--rule); stroke-width:1.25}
+.d-rung rect.top{stroke:var(--accent); stroke-width:2}
+.d-rungtext text{font-size:14px; fill:var(--ink-soft)}
+.d-rungtext text.sm{font-family:var(--mono); font-size:11px; fill:var(--muted)}
+.d-rungtext text.hi{fill:var(--accent); font-weight:600}
+.d-cut{stroke:var(--accent); stroke-width:1.5; stroke-dasharray:7 4}
+.d-cut-t{font-family:var(--mono); font-size:11px; fill:var(--accent)}
+.d-brace path{stroke:var(--rule); stroke-width:1.25; fill:none}
+.d-side{font-family:var(--mono); font-size:11.5px; fill:var(--accent)}
+.d-side.muted{fill:var(--muted)}
+
+.prose p.lede{
+  font-family:var(--sans); font-weight:500; color:var(--ink);
+  font-size:clamp(1.28rem,3.1vw,1.62rem); line-height:1.34; letter-spacing:-.014em;
+  margin:0 0 2rem; padding:1.35rem 0 1.5rem;
+  border-top:2px solid var(--accent); border-bottom:1px solid var(--rule);
+  text-wrap:balance;
+}
+
+a.ref{
+  font-family:var(--mono); font-size:.68em; font-weight:500;
+  text-decoration:none; color:var(--accent);
+  vertical-align:.42em; padding-left:.12em; letter-spacing:-.02em;
+}
+a.ref:hover{text-decoration:underline}
+ol.srclist li:target{
+  background:var(--panel); outline:2px solid var(--accent); outline-offset:5px;
+}
+#sources + p{font-size:.86rem; color:var(--muted); font-style:italic; margin-bottom:1rem}
+#sources + p + ol, ol.srclist{padding-left:1.4rem; color:var(--ink-soft)}
+ol.srclist li{margin-bottom:.6rem; line-height:1.5; scroll-margin-top:2rem}
+ol.srclist li a{color:var(--ink); text-decoration-color:var(--accent)}
+
+/* compression anatomy */
+.c-src rect{fill:var(--paper); stroke:var(--ink-soft); stroke-width:1.25}
+.c-head{font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; fill:var(--ink)}
+.c-item text{font-size:13.5px; fill:var(--ink-soft)}
+.c-keep path{stroke:var(--affirm); stroke-width:1.75; fill:none}
+.c-keep path.head{fill:var(--affirm); stroke:none}
+.c-keep text{font-family:var(--mono); font-size:11px; fill:var(--affirm)}
+.c-rule rect{fill:var(--paper); stroke:var(--affirm); stroke-width:2}
+.c-ruletext{font-size:16px; font-weight:600; fill:var(--ink)}
+.c-good{font-family:var(--mono); font-size:11px; fill:var(--affirm)}
+.c-drop path{stroke:var(--accent); stroke-width:1.75; fill:none; stroke-dasharray:5 4}
+.c-drop path.head{fill:var(--accent); stroke:none; stroke-dasharray:none}
+.c-drop text{font-family:var(--mono); font-size:11px; fill:var(--accent)}
+.c-dropbox rect{fill:none; stroke:var(--accent); stroke-width:1.25; stroke-dasharray:5 4}
+.c-drophead{font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; fill:var(--accent)}
+.c-dropitem text{font-size:13.5px; fill:var(--ink)}
+
+/* legibility plane */
+.p-zone{fill:var(--ink-soft); opacity:.09}
+.p-zone.want{fill:var(--accent); opacity:.10}
+.p-pt circle{fill:var(--ink-soft)}
+.p-pt text{font-size:13px; fill:var(--ink-soft)}
+.p-pt.want circle{fill:var(--accent)}
+.p-zonelabel{font-family:var(--mono); font-size:10.5px; letter-spacing:.11em; fill:var(--muted)}
+.p-zonelabel.want{fill:var(--accent)}
+.p-want{font-size:14px; fill:var(--ink)}
+.p-arrow{stroke:var(--accent); stroke-width:1.25; fill:none; stroke-dasharray:4 4}
+.p-arrowlabel{font-family:var(--mono); font-size:11px; fill:var(--accent)}
+
+/* rule timeline */
+.t-band rect{fill:var(--accent); opacity:.16; stroke:var(--accent); stroke-width:1.25}
+.t-bandtext{font-size:13.5px; fill:var(--ink); font-weight:500}
+.t-exempt rect{fill:var(--paper); stroke:var(--removed); stroke-width:1.25; stroke-dasharray:4 3}
+.t-exempttext{font-family:var(--mono); font-size:11px; fill:var(--muted)}
+.t-tick path{stroke:var(--ink-soft); stroke-width:1.25}
+.t-year text{font-family:var(--mono); font-size:11.5px; fill:var(--ink-soft)}
+.t-note text{font-family:var(--mono); font-size:11px; fill:var(--accent)}
+.t-open rect{fill:none; stroke:var(--removed); stroke-width:1.25; stroke-dasharray:6 4}
+.t-opentext{font-family:var(--mono); font-size:11px; fill:var(--muted)}
+
+.prose .aside{
+  margin:2.2rem 0; padding:1.1rem 1.3rem;
+  border-left:2px solid var(--rule); background:transparent;
+  font-size:.93rem; line-height:1.55; color:var(--muted);
+}
+.prose .aside p{margin:0 0 .7rem}
+.prose .aside p:last-child{margin:0}
+.prose .aside a{color:var(--ink-soft); text-decoration-color:var(--muted)}
+
+/* wide figures stay legible on narrow viewports */
+@media (max-width:760px){
+  .fig{width:auto; margin-left:0; margin-right:0; overflow-x:auto; -webkit-overflow-scrolling:touch}
+  .fig svg{min-width:680px}
+  .hero-fig{overflow-x:auto; -webkit-overflow-scrolling:touch}
+  .hero-fig svg{min-width:680px}
+  .fig figcaption, .hero-fig figcaption{position:sticky; left:0}
+  .fig figcaption::before{
+    content:"Scroll the figure sideways. "; font-family:var(--mono);
+    font-size:.72rem; letter-spacing:.04em; color:var(--accent);
+  }
+}
+@media (prefers-color-scheme: dark){
+  :root{--rule:#39434c; --removed:#7a858f}
+  .s-cell circle.off, .s-legend circle.off{stroke-width:1.75}
+  .d-fill{opacity:.16}
+  .p-zone{opacity:.14}
+}
+
+.partgist{
+  font-family:var(--sans); font-size:.95rem; line-height:1.45; color:var(--ink-soft);
+  margin:.7rem 0 0; max-width:32rem; text-wrap:pretty;
+}
+
+.keylesson p:first-child{margin:0}
+.keylesson p:first-child + p{margin-top:0}
+
+.w-head{font-family:var(--mono); font-size:11px; letter-spacing:.11em; fill:var(--ink)}
+.w-box rect{fill:none; stroke:var(--ink-soft); stroke-width:1.25}
+.w-box rect.hot{stroke:var(--accent); stroke-width:2}
+.w-inner rect{fill:var(--paper); stroke:var(--rule); stroke-width:1}
+.w-text text{font-size:13.5px; fill:var(--ink)}
+.w-text text.hot{fill:var(--accent); font-weight:600}
+.w-text text.sm{font-family:var(--mono); font-size:10.5px; fill:var(--muted)}
+.w-link path{stroke:var(--ink-soft); stroke-width:1.25; stroke-dasharray:4 3}
+.w-verdict{font-family:var(--sans); font-size:13.5px; font-weight:600; fill:var(--accent)}
+.w-colhead{font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; fill:var(--muted)}
+.w-cmp text{font-size:13.5px; fill:var(--ink-soft)}
+.w-cmp text.yes{fill:var(--accent); font-weight:500}
+.w-cmp text.no{fill:var(--affirm)}
+.w-cmp text.part{fill:var(--muted)}
+
+/* ----------------------------------------------------- check your understanding --- */
+.quiz{max-width:var(--measure); margin:0 auto; padding-bottom:5rem}
+.quiz .qintro{font-family:var(--sans); font-size:.94rem; color:var(--muted); margin:0 0 1.1rem}
+#qbox{border:1px solid var(--rule); border-radius:12px; padding:1.4rem 1.5rem; background:var(--panel)}
+.q-progress{font-family:var(--mono); font-weight:500; font-size:.66rem; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-bottom:.9rem}
+.q-question{font-family:var(--sans); font-weight:600; font-size:1.05rem; line-height:1.4; margin-bottom:1rem}
+.q-opt{display:block; width:100%; text-align:left; font-family:var(--sans); font-size:.94rem; color:var(--ink); padding:.62rem .85rem; margin-bottom:.5rem; border:1px solid var(--rule); border-radius:8px; background:var(--paper); cursor:pointer}
+.q-opt:hover:not(:disabled){border-color:var(--accent)}
+.q-opt:disabled{cursor:default}
+.q-opt.correct{border-color:var(--affirm); background:color-mix(in srgb, var(--affirm) 14%, var(--paper))}
+.q-opt.wrong{border-color:var(--accent); background:color-mix(in srgb, var(--accent) 14%, var(--paper))}
+.q-explain{font-family:var(--serif); font-style:italic; font-size:.9rem; line-height:1.55; color:var(--muted); margin:.75rem 0 1rem}
+.qbtn{font-family:var(--sans); font-weight:600; font-size:.88rem; color:#fff; background:var(--accent); border:0; border-radius:8px; padding:.62rem 1.35rem; cursor:pointer}
+.q-score{font-family:var(--sans); font-weight:700; font-size:1.4rem; margin-bottom:.35rem}
+.q-verdict{font-family:var(--serif); font-style:italic; font-size:1rem; color:var(--muted); margin-bottom:1.1rem}
+.q-opt.sel{border-color:var(--ink-soft); background:color-mix(in srgb, var(--ink-soft) 14%, var(--paper))}
+.qbtn:disabled{opacity:.45; cursor:default}
+
+</style>
+</head><body>
+<header class="masthead">
+  <a class="brand" href="#top">Unmitigated Risk</a>
+  <span class="date">August 2026</span>
+</header>
+
+<main id="top">
+  <div class="hero">
+    <h1>Security Design Never Scaled</h1>
+    <p class="dek">Two services, one bug, every instrument calling them identical. We scaled security's answers but never the reasoning behind them, and machine reasoning may finally change that.</p>
+  </div>
+
+
+<figure class="hero-fig">
+<svg viewBox="0 0 1060 400" role="img" aria-labelledby="h0t">
+  <title id="h0t">A reachable path through a system graph, unchanged by a fully satisfied column of security artifacts</title>
+  <text class="s-eyebrow accent" x="20" y="24">A PERFECTLY DOCUMENTED INSECURE SYSTEM</text>
+
+  <text class="s-panelhead" x="20" y="62">THE SYSTEM</text>
+  <text class="s-sub" x="20" y="80">authority, trust boundaries, dependencies, failure modes</text>
+
+  <g class="h-graph">
+    <path class="dim" d="M60 140 L150 112 M150 112 L240 132 M240 132 L232 200 M150 112 L232 200 M240 132 L318 108 M318 108 L318 232 M318 108 L392 160 M60 140 L232 200 M240 132 L318 232"/>
+    <path class="live" d="M60 140 L138 186 L232 200 L318 232 L384 168"/>
+    <path class="live-head" d="M392 160 L387.5 171.2 L380.7 164.2 Z"/>
+    <circle class="dim" cx="150" cy="112" r="6"/><circle class="dim" cx="240" cy="132" r="6"/>
+    <circle class="dim" cx="318" cy="108" r="6"/>
+    <circle class="on" cx="60"  cy="140" r="7"/><circle class="on" cx="138" cy="186" r="7"/>
+    <circle class="on" cx="232" cy="200" r="7"/><circle class="on" cx="318" cy="232" r="7"/>
+    <circle class="end" cx="392" cy="160" r="9"/>
+  </g>
+  <text class="h-tag" x="60" y="122" text-anchor="middle">entry</text>
+  <text class="h-tag" x="404" y="146">consequence</text>
+  <text class="h-tag" x="150" y="262">four steps, every one sanctioned</text>
+
+  <g class="h-arrow">
+    <path d="M448 172 H598"/>
+    <path class="h-fill" d="M604 172 l-10 -6 v12 z"/>
+    <text x="523" y="158" text-anchor="middle">compression</text>
+    <text x="523" y="196" text-anchor="middle" class="s-sub">the threat model falls out here</text>
+  </g>
+
+  <text class="s-panelhead" x="650" y="62">WHAT WE BUY INSTEAD</text>
+  <text class="s-sub" x="650" y="80">legible, testable, budgeted, transactable</text>
+  <g class="h-token">
+    <rect x="650" y="98"  width="200" height="30" rx="3"/><text x="662" y="118">HSM</text><text x="836" y="118" text-anchor="end" class="tick">deployed</text>
+    <rect x="650" y="136" width="200" height="30" rx="3"/><text x="662" y="156">SBOM</text><text x="836" y="156" text-anchor="end" class="tick">current</text>
+    <rect x="650" y="174" width="200" height="30" rx="3"/><text x="662" y="194">MFA</text><text x="836" y="194" text-anchor="end" class="tick">98%</text>
+    <rect x="650" y="212" width="200" height="30" rx="3"/><text x="662" y="232">Audit</text><text x="836" y="232" text-anchor="end" class="tick">unqualified</text>
+    <rect x="650" y="250" width="200" height="30" rx="3"/><text x="662" y="270">Pentest</text><text x="836" y="270" text-anchor="end" class="tick">passed</text>
+  </g>
+  <text class="h-tag" x="870" y="186">the budget</text>
+  <text class="h-tag" x="870" y="204">goes here</text>
+
+  <path class="h-under" d="M20 318 H1040"/>
+  <text class="h-verdict" x="530" y="348" text-anchor="middle">Every row on the right is green. The path on the left is unchanged.</text>
+  <text class="s-sub" x="530" y="372" text-anchor="middle">Not one of those controls is wrong. None of them is the property anyone wanted.</text>
+</svg>
+<figcaption>The reductio. You can satisfy every requirement in the right-hand column and still leave a four-step route from an internet-facing system to the authority that ends the company.</figcaption>
+</figure>
+
+
+  <nav class="toc" aria-label="Contents">
+    <h2>Contents</h2>
+    <ol>
+<li class="toc-part"><a href="#pI">Part I · The cache</a></li>
+<li><a href="#s1"><span class="tocnum">1</span>Controls are cached answers</a></li>
+<li><a href="#s2"><span class="tocnum">2</span>What compression cannot see</a></li>
+<li class="toc-part"><a href="#pII">Part II · The regress</a></li>
+<li><a href="#s3"><span class="tocnum">3</span>Why the machinery keeps growing</a></li>
+<li class="toc-part"><a href="#pIII">Part III · The turn</a></li>
+<li><a href="#s4"><span class="tocnum">4</span>What changed</a></li>
+<li><a href="#s5"><span class="tocnum">5</span>What scaling security design would require</a></li>
+<li class="toc-part"><a href="#sources">Sources</a></li>
+<li class="toc-part"><a href="#quiz">✓ Check your understanding</a></li>
+    </ol>
+  </nav>
+
+  <article class="prose">
+<p>Take an ordinary service. It accepts connections from the internet and terminates TLS, so it parses attacker-controlled bytes with a general-purpose library. It proves its own identity to peers, so it holds a long-lived private key. It runs business logic against a database, so it holds a database credential. Written the ordinary way, that is one process under one uid, and all three jobs share an address space. There is nothing irresponsible about it. An enormous amount of software is built exactly this way.</p>
+<p>Now write the same service as four processes under four uids, talking over local sockets that authenticate their peer. <code>netd</code> terminates TLS and holds no long-lived secret. <code>authd</code> holds the host key and exposes one operation, sign a well-formed challenge, and never returns key material. <code>appd</code> holds the database credential and accepts only a defined message schema, from <code>netd</code> and nobody else. <code>logd</code> takes append-only writes. None of this is novel. OpenSSH has been built this way since 2002, and Provos, Friedl and Honeyman<a class="ref" href="#r-privsep">[1]</a> wrote up the reasoning the following year. Postfix, qmail, and modern browsers are the same idea. It also costs more, in four supervised processes instead of one, serialization on a path that used to be a function call, latency, new failure modes when a socket goes away, harder debugging, and a schema that now has to be maintained as a real interface because it has become a security boundary.</p>
+<p>Now drop Heartbleed<a class="ref" href="#r-heartbleed">[2]</a> into both.</p>
+<p>Heartbleed was a buffer over-read in the TLS heartbeat extension, returning up to sixty-four kilobytes of adjacent process heap per request, repeatable as often as the attacker likes and invisible in the logs. Not code execution, but a read primitive, which is exactly why it is the useful example. What the attacker gets is precisely and only what happens to be in the address space.</p>
+<p>In the monolith, the address space is everything. The host private key is on that heap, along with the database credential, the session state, and the decrypted traffic of every other user currently connected. Whether a given read returns the key is a matter of heap layout and patience, and in 2014 the answer turned out to be patience. Cloudflare put a server up as a challenge and researchers pulled the private key off it within a day. Recovery is not patching OpenSSL. It is rotating an identity, reissuing, notifying relying parties, and assuming the database was read.</p>
+<p>In the separated design the same bug is in <code>netd</code>, whose heap holds TLS session state for the connections it is currently serving, and that is all it holds. The host key is in <code>authd</code>, under a different uid, in a different address space, and a read primitive cannot cross an address space. The database credential is in <code>appd</code>, likewise. What still leaks is the in-flight plaintext of the connections <code>netd</code> is handling, which is genuinely bad and which no amount of process separation fixes, because handling that plaintext is the job. The design did not make the bug harmless. It decided, before the bug existed, which secrets were allowed to be in the room when one arrived.</p>
+<p>Give the attacker code execution instead of a read primitive. The monolith outcome is unchanged; they already had everything. In the separated design they can now speak the IPC protocol, driving <code>appd</code> through its schema and asking <code>authd</code> to sign well-formed challenges. Real capabilities, but bounded by an interface somebody designed rather than unbounded by an address space that happened to contain everything. Same architecture, two bug classes, two different residuals, and you can only see either one by reasoning about the shape.</p>
+
+<figure class="fig">
+<svg viewBox="0 0 1060 490" role="img" aria-labelledby="fkt">
+  <title id="fkt">Heartbleed reaching every secret in a monolith and only session state in a separated design</title>
+  <text class="s-eyebrow" x="20" y="24">HEARTBLEED, TWO SHAPES</text>
+  <text class="s-eyebrow accent" x="1040" y="24" text-anchor="end">IDENTICAL SBOM, CVE, AND BASE SCORE</text>
+
+  <text class="w-head" x="20" y="60">MONOLITH &#183; one process, one uid, one heap</text>
+  <g class="w-box"><rect x="20" y="76" width="440" height="150" rx="4" class="hot"/></g>
+  <g class="w-inner">
+    <rect x="40" y="100" width="180" height="42" rx="3"/><rect x="240" y="100" width="200" height="42" rx="3"/>
+    <rect x="40" y="158" width="180" height="42" rx="3"/><rect x="240" y="158" width="200" height="42" rx="3"/>
+  </g>
+  <g class="w-text">
+    <text x="130" y="126" text-anchor="middle">TLS heartbeat</text>
+    <text x="340" y="126" text-anchor="middle">host private key</text>
+    <text x="130" y="184" text-anchor="middle">session state</text>
+    <text x="340" y="184" text-anchor="middle">database credential</text>
+  </g>
+  <text class="w-verdict" x="20" y="246">The over-read returns whatever is next to it.</text>
+  <text class="w-verdict" x="20" y="266">All of this is next to it.</text>
+
+  <text class="w-head" x="600" y="60">SEPARATED &#183; four uids, authenticated local IPC</text>
+  <g class="w-box">
+    <rect x="600" y="76" width="200" height="60" rx="4" class="hot"/>
+    <rect x="840" y="76" width="200" height="60" rx="4"/>
+    <rect x="600" y="156" width="200" height="60" rx="4"/>
+    <rect x="840" y="156" width="200" height="60" rx="4"/>
+  </g>
+  <g class="w-text">
+    <text x="700" y="101" text-anchor="middle" class="hot">netd</text><text x="700" y="120" text-anchor="middle" class="sm">TLS, session state only</text>
+    <text x="940" y="101" text-anchor="middle">authd</text><text x="940" y="120" text-anchor="middle" class="sm">host key, sign() only</text>
+    <text x="700" y="181" text-anchor="middle">appd</text><text x="700" y="200" text-anchor="middle" class="sm">logic, db credential</text>
+    <text x="940" y="181" text-anchor="middle">logd</text><text x="940" y="200" text-anchor="middle" class="sm">append only</text>
+  </g>
+  <g class="w-link">
+    <path d="M800 106 H836"/><path d="M700 140 V152"/><path d="M800 186 H836"/>
+  </g>
+  <text class="w-verdict" x="600" y="246">A read cannot cross an address space.</text>
+  <text class="w-verdict" x="600" y="266">Only netd&#8217;s own heap is next to it.</text>
+
+  <path class="s-rule" d="M20 292 H1040"/>
+  <text class="w-colhead" x="20" y="318">WHAT THE OVER-READ RETURNS</text>
+  <g class="w-cmp">
+    <text x="20" y="348">host private key</text><text x="330" y="348" class="yes">recovered in practice, 2014</text><text x="680" y="348" class="no">different address space</text>
+    <text x="20" y="376">database credential</text><text x="330" y="376" class="yes">on the same heap</text><text x="680" y="376" class="no">different address space</text>
+    <text x="20" y="404">other users&#8217; in-flight plaintext</text><text x="330" y="404" class="yes">disclosed</text><text x="680" y="404" class="yes">disclosed</text>
+    <text x="20" y="432">everything else the service held</text><text x="330" y="432" class="yes">disclosed</text><text x="680" y="432" class="no">nothing else is there</text>
+  </g>
+  <text class="s-sub" x="20" y="466">The third row is the honest one. Separation decided which secrets were in the room. It did not stop the bug.</text>
+</svg>
+<figcaption>Figure 1 &middot; Same library, same disclosure, same patch deadline, same scanner output, same audit result. One of these systems reissues its identity and the other does not, and no default instrument in the pipeline distinguishes them without architectural context.</figcaption>
+</figure>
+
+<p>Nothing we built to measure security tells these two systems apart on its own.</p>
+<p>They link the same library, so the SBOM is identical. They are affected by the same disclosure, so the CVE is identical. The base score is computed on the vulnerable component rather than on your deployment, so that is identical too, and both land in the same remediation bucket under the same policy with the same deadline. The scanner output matches. The audit tests whether critical vulnerabilities were patched inside the window, and both pass or both fail together. A conventional externally scoped pentest sees the same exposed interface. A procurement questionnaire sees the same technologies. Every one of these default instruments agrees the two systems are in the same condition, and one of them loses its identity key while the other does not.</p>
+<p>Heartbleed makes this almost too neat. NVD scored it 5.0 Medium under CVSS v2 and later rescored it 7.5 High under v3.1. The bug that forced a global TLS certificate reissue was rated medium, and the rescoring fixed nothing, because both numbers describe the component rather than your deployment of it, and the whole question was what your deployment kept in that address space. CVSS does have a place for the deployment, the environmental metrics, and almost nobody fills it in, because doing so takes the architectural reasoning nobody has budgeted. The instruments are not blind by nature. They are blind by default, because the input that would separate the two systems is the expensive thing.</p>
+<p>The difference between those two services is not which controls they hold. Both can hold the same ones. It is how the parts are arranged, and arrangement is a fact about the whole system that no check on any single control can see. And the engineer who proposes the separated design is asking for budget to change a property that every instrument reports as already fine, while the engineer who ships the monolith is out of compliance with nothing. A compliance checklist tests whether the cached answers are present; it has no vocabulary for whether the arrangement those answers sit inside still makes sense.</p>
+<p>This essay is about why that is the normal condition rather than an oversight. The design reasoning never scaled. We could not afford to apply it to every system, so we compressed it into controls, rules, patterns, certifications, and tests. The compression was rational and it worked. But it dropped the reasoning behind each control, the threat model that made it the right answer and the signal that would tell you when it had stopped being right. We learned to scale the answers. We never learned to scale the reasoning that produced them, so our machinery ended up measuring the pieces while attackers exploit what the pieces compose into. What is changing now is that the reasoning itself may be getting cheap enough to scale.</p>
+<p>Say what secure design is, plainly. It is not the presence of any particular control but the shape of the whole, the arrangement that decides, before any particular bug, what a compromise can reach. It helps to hold that apart from two things the field keeps collapsing into it. One is reducing how many vulnerabilities get created, which memory-safe languages, safe-by-default frameworks, and hardened APIs all do, retiring whole classes of defect that once consumed a generation of researchers. Another is finding the vulnerabilities created anyway, which fuzzers, scanners, and now autonomous agents that top bug-bounty leaderboards all do, and which is getting cheaper by the month. Both attack the presence of vulnerabilities. Neither touches what a vulnerability reaches once it exists. That is design, the only one of the three that decides whether a given bug rotates an identity key or leaks a little session state. Presence never reaches zero, because no memory model rules out a logic flaw, an over-broad grant, or two sanctioned edges composing into a path, so consequence is the residual that design, and only design, owns.</p>
+<p>The strongest version of this is not about bugs you know. Chrome shipped a sandboxed, multi-process design in 2008 that kept a compromised renderer away from the machine<a class="ref" href="#r-chromium">[3]</a>, and then spent roughly five years and 450,000 lines of change on Site Isolation, which puts every site in its own process so one site cannot reach another&rsquo;s data<a class="ref" href="#r-siteiso">[4]</a>. It was expensive and, for years, unglamorous. Then Spectre arrived in 2018, a CPU flaw that lets code read memory in its own process with no software bug to patch and no clean software fix, and the work already done contained it. Because cross-site data no longer shared an address space, Chrome enabled Site Isolation by default and turned an unpatchable hardware class into a bounded one. The design did not anticipate Spectre. It anticipated that something would eventually read across whatever boundary was cheapest to cross, and it made that boundary a process.</p>
+<p>Design in this sense is not confined to code. Google runs its services on a substrate that gives developers identity, isolation, and lifecycle management by default<a class="ref" href="#r-borg">[5]</a>, so the cheap path is many small services, and small isolated services are trust boundaries whether or not anyone set out to draw one. iOS assumes an app can be killed at any moment and denies it unmediated access to another app&rsquo;s data<a class="ref" href="#r-ios">[6]</a>, so the sandbox and the disposable process are security decisions wearing power-management clothes.</p>
+
+<figure class="fig">
+<svg viewBox="0 0 1060 430" role="img" aria-labelledby="flyt">
+  <title id="flyt">The same design move at three layers: a boundary that decides what a compromise can reach, in code, in the platform, and in the application model</title>
+
+  <text class="s-eyebrow" x="24" y="26">THE SAME MOVE AT EVERY LAYER</text>
+  <text class="s-eyebrow accent" x="760" y="30" text-anchor="middle">WHAT IT CANNOT REACH</text>
+  <text class="s-sub" x="545" y="70" text-anchor="middle" style="fill:var(--muted)">a boundary the design draws</text>
+
+  <line x1="545" y1="86" x2="545" y2="404" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 4"/>
+
+  <text class="s-panelhead" x="24" y="112">IN CODE</text>
+  <text class="s-sub" x="24" y="130" style="fill:var(--muted)">processes</text>
+  <line x1="326" y1="120" x2="512" y2="120" stroke="var(--accent)" stroke-width="1.75"/>
+  <path d="M512 114 l10 6 -10 6z" fill="var(--accent)"/>
+  <circle cx="310" cy="120" r="15" fill="var(--accent)"/>
+  <text x="310" y="124" text-anchor="middle" style="font-family:var(--sans);font-size:10px;fill:#fff">taken</text>
+  <circle cx="760" cy="120" r="15" fill="var(--paper)" stroke="var(--removed)" stroke-width="1.5"/>
+  <text class="s-sub" x="760" y="154" text-anchor="middle">host key</text>
+
+  <text class="s-panelhead" x="24" y="232">IN THE PLATFORM</text>
+  <text class="s-sub" x="24" y="250" style="fill:var(--muted)">Borg, Kubernetes</text>
+  <line x1="326" y1="240" x2="512" y2="240" stroke="var(--accent)" stroke-width="1.75"/>
+  <path d="M512 234 l10 6 -10 6z" fill="var(--accent)"/>
+  <circle cx="310" cy="240" r="15" fill="var(--accent)"/>
+  <text x="310" y="244" text-anchor="middle" style="font-family:var(--sans);font-size:10px;fill:#fff">taken</text>
+  <circle cx="760" cy="240" r="15" fill="var(--paper)" stroke="var(--removed)" stroke-width="1.5"/>
+  <text class="s-sub" x="760" y="274" text-anchor="middle">other services</text>
+
+  <text class="s-panelhead" x="24" y="352">IN THE APP</text>
+  <text class="s-sub" x="24" y="370" style="fill:var(--muted)">iOS sandbox</text>
+  <line x1="326" y1="360" x2="512" y2="360" stroke="var(--accent)" stroke-width="1.75"/>
+  <path d="M512 354 l10 6 -10 6z" fill="var(--accent)"/>
+  <circle cx="310" cy="360" r="15" fill="var(--accent)"/>
+  <text x="310" y="364" text-anchor="middle" style="font-family:var(--sans);font-size:10px;fill:#fff">taken</text>
+  <circle cx="760" cy="360" r="15" fill="var(--paper)" stroke="var(--removed)" stroke-width="1.5"/>
+  <text class="s-sub" x="760" y="394" text-anchor="middle">other apps' data</text>
+</svg>
+<figcaption>Figure 2 &middot; The same move at three layers. A boundary decides what a compromise reaches, whether it is drawn between processes, between services on a platform, or between apps on a device. A substrate can make that boundary the default, so the contained shape is the one developers get for free.</figcaption>
+</figure>
+
+<p>None of these ask the developer to be a security architect. They bake the shape into the substrate so the contained thing is the default, which is the form of secure design that has actually scaled, and it scales the answer rather than the reasoning. Someone did the expensive design once, at the platform, and everyone above inherits the boundary for free, but only for the shapes the platform anticipated. The moment a system needs a boundary the substrate does not provide, you are back to reasoning it out by hand, at the cost the rest of this essay is about.</p>
+<p>The move is not finished arriving. The newest place it is showing up is around AI agents, where the component processing hostile input is a language model that cannot be assumed immune to prompt injection. Google&rsquo;s browsing agent does not try to build a planner that cannot be prompt-injected. It assumes the planner can be, and constrains what a manipulated one reaches, routing the decision through a separate critic that never sees the untrusted web content and confining the agent to a declared set of origins it may read and a narrower set it may act on<a class="ref" href="#r-agentic">[7]</a>. That is Heartbleed&rsquo;s lesson on unfamiliar hardware. Do not ask whether the complicated component can be made perfect. Decide what its failure is allowed to reach. Thirty years after privilege separation and fifteen after the browser sandbox, the same design move is being made against the least predictable component anyone has yet had to contain.</p>
+<div class="partbreak" id="pI"><span class="partnum">Part I</span><h2 class="partname">The cache</h2><p class="partgist">Why we compressed design into controls, and the two things the compression drops.</p></div>
+<h3 class="sec" id="s1"><span class="secnum">1</span>Controls are cached answers</h3>
+<p>Security controls are cached answers to security-design questions, and we scaled security by distributing the answers and discarding the reasoning that produced them. Some began as a compensating control, a stand-in for design reasoning nobody could afford; others were always mechanisms or principles in their own right. What they come to share is the role they play in the pipeline, where each ends up standing in for the design question it once answered, present as an answer with the reasoning behind it gone.</p>
+<p>This is not a new claim about what security <em>is</em>. Saltzer and Schroeder were writing about least privilege, complete mediation, and unwanted access paths in 1975<a class="ref" href="#r-saltzer">[8]</a>. NIST treats security as an emergent property of a system and systems security engineering as a subdiscipline of systems engineering, which is SP 800-160<a class="ref" href="#r-nist160">[9]</a> in one sentence. Nobody forgot security design. It never scaled, and what we built in its place has been standing in for it ever since.</p>
+<p>It never scaled because the reasoning is expensive. Understand what the system is for and who holds authority. Trace what becomes reachable when an identity, a component, or a trust boundary fails. Notice when two individually reasonable decisions compose into a dangerous path. Then decide which risks to eliminate, contain, accept, or transfer. That requires holding a whole system in one head, keeping it there while the system changes, and being in the room when the consequential decisions get made.</p>
+<p>It also resisted the automation that arrived for everything around it, for reasons that matter later. Design reasoning is non-local. Whether an authority relationship is acceptable depends on parts of the system you are not looking at, so a scanner that recognizes a bad pattern inside a bounded window cannot recognize a bad architecture. It is counterfactual. The question is not what the system did but what becomes possible if a component behaves differently, so watching the system run does not answer it on its own. And it has no cheap oracle. A design is correct until an adversary demonstrates otherwise, and the absence of a demonstration is not proof that none exists. Incidents, red teams, and formal verification can all supply evidence, but none of them is the automatic <em>crashed, therefore wrong</em> signal that closes the write-it-and-run-it loop for the rest of software.</p>
+<p>This is a different question from whether the code contains a vulnerability. Preventing defects and finding them are both worth doing and both getting cheaper, but neither decides what a defect that slips through is allowed to reach. The two are not substitutes for design, and no amount of the first two adds up to the third.</p>
+<p>So we rationed. The highest-risk systems got real attention and everything else got something cheaper, expert threat reasoning compressed into portable substitutes (rules, patterns, controls, certifications, audit tests) that let thousands of people make mostly-good decisions without repeating decades of analysis. Every expert discipline does this. Building codes are compressed structural engineering; clinical guidelines compressed medicine. The difference is what those fields kept. A building code does not stamp drawings; a licensed engineer does, and the compression stayed subordinate to a judgment attached to a person accountable for departing from it. Security compressed and kept only the artifact.</p>
+
+<figure class="fig">
+<svg viewBox="0 0 1060 400" role="img" aria-labelledby="fht">
+  <title id="fht">Expert threat reasoning compressed into a portable rule, with the justification discarded</title>
+  <text class="s-eyebrow" x="20" y="24">WHAT COMPRESSION KEEPS, AND WHAT IT DROPS</text>
+
+  <g class="c-src"><rect x="20" y="52" width="330" height="212" rx="4"/></g>
+  <text class="c-head" x="38" y="76">EXPERT THREAT REASONING</text>
+  <g class="c-item">
+    <text x="38" y="108">the adversaries assumed</text>
+    <text x="38" y="138">the consequences weighed</text>
+    <text x="38" y="168">the alternatives compared</text>
+    <text x="38" y="198">the cost judged acceptable</text>
+    <text x="38" y="228">the conditions under which it holds</text>
+  </g>
+
+  <g class="c-keep">
+    <path d="M356 112 H514"/><path class="head" d="M524 112 l-13 -7 v14 z"/>
+    <text x="435" y="100" text-anchor="middle">compresses to</text>
+  </g>
+  <g class="c-rule"><rect x="534" y="84" width="330" height="56" rx="4"/></g>
+  <text class="c-ruletext" x="699" y="118" text-anchor="middle">Keys belong in HSMs</text>
+  <text class="c-good" x="884" y="106">portable, teachable,</text>
+  <text class="c-good" x="884" y="124">auditable, enforceable</text>
+  <text class="s-sub" x="534" y="164">This is not a mistake. It is how a discipline scales past its experts.</text>
+
+  <g class="c-drop">
+    <path d="M356 224 C 430 224 452 266 508 274"/><path class="head" d="M522 276 l-14 -5 -1 14 z"/>
+    <text x="404" y="292" text-anchor="middle">discards</text>
+  </g>
+  <g class="c-dropbox"><rect x="534" y="238" width="490" height="86" rx="4"/></g>
+  <text class="c-drophead" x="552" y="262">WHAT FALLS OUT</text>
+  <g class="c-dropitem">
+    <text x="552" y="288">the threat model that justified the rule</text>
+    <text x="552" y="312">the means of knowing when it stops applying</text>
+  </g>
+
+  <text class="s-caption" x="530" y="368" text-anchor="middle">Everything downstream in this essay follows from the second line.</text>
+</svg>
+<figcaption>Figure 3 &middot; The rule is the useful residue. The reasoning that produced it is not carried along with it, which is why the rule cannot tell you when it has stopped being the right answer.</figcaption>
+</figure>
+
+<p>The compressions worked, and the argument depends on that. MFA closed off the category of compromise that a stolen password alone used to enable. Hardware key storage prevents software extraction of the key. FIPS validation really does establish properties about a cryptographic boundary. A compression that produced nothing would have been abandoned decades ago. What went wrong is that they were useful enough to become the thing we buy, measure, mandate, and eventually mistake for the property they were supporting. And that dropped reasoning is exactly what tells you whether the control is still doing its job here.</p>
+<p>Take <em>keys belong in HSMs</em>, a rule I have spent a lot of my career on both sides of. It drops the only question that matters, which is how many reachable extraction paths that boundary removes in <em>your</em> system, and it has no grammar for the one thing an engineer actually needs to say, that a design is <em>better against this threat model, at this cost</em>. There is usually an intermediate design the rule cannot express, a signing key in a separate process under its own user, exposing a narrow signing interface with a policy on what it will agree to sign. It is not an HSM; root still wins. But application compromise no longer discloses the key, dumping the environment no longer discloses it, and key use becomes separately auditable. Several attack paths vanish at a fraction of the canonical control&rsquo;s cost, and the institution gives the design no credit because it is not the canonical control. Risk reduction is continuous; institutional credit is a step function. That gap is why a team that cannot afford the approved control rationally does nothing at all.</p>
+<p>The cliff has a mirror, and it is worse because it looks like success. Encryption at rest is the clean example. It is a real control, usually implemented correctly, and its canonical threat model is loss or compromise of the storage medium, a stolen drive or a backup tape leaving the building in a van. Against that it works exactly as designed. But name the thing that actually takes the data, an over-privileged service account, an injection flaw, a compromised application host, and the database is asked politely for plaintext by something holding valid credentials, and it complies, because complying is its job. At-rest encryption is not defeated in those scenarios; it is simply not in the path. And it satisfies everything, the questionnaire that asks whether data is encrypted at rest, the auditor who tests whether the feature is enabled, the framework that awards the control, with nobody in the chain saying anything false. The cliff withholds credit from a design that removes real paths; the mirror grants full credit to one that removes none of the paths that matter. Both are what happens once the threat model has been stripped off, because the threat model was the only thing that would have told you which case you were standing in.</p>
+<p>The same pattern appears with session cookies. Every control checklist demands <code>HttpOnly</code>, <code>Secure</code>, and <code>SameSite</code>. None of them asks whether the application put every user behind a single origin or gave each user, or each piece of untrusted content, its own. Custom user domains turn the same-origin policy into a cookie-isolation boundary. An XSS that would have stolen over-scoped cookies on a shared origin now executes in a different origin. The flags are identical; the residual is not.</p>
+<p>This is the line between two kinds of compression. A process boundary, a sandbox, a per-user origin, or a platform default bounds what a compromise reaches by construction, and keeps working even when no one remembers why it is there. A rule like <em>encrypt at rest</em>, <em>keys belong in HSMs</em>, or <em>set the cookie flags</em> only asserts that a control is present, and can be satisfied in full while containing nothing. The first is design, cached into a substrate. The second is a compensating control that forgot what it was compensating for. This is why the objection that sandboxes and secure defaults obviously scaled is not a counterexample but the whole point. Those are answers cached into a shape, and caching the answer is exactly what scales, because the containment survives everyone forgetting the reasoning behind it. What never scaled is the reasoning that knows which shape a system needs, and the reasoning that notices when a cached answer has quietly stopped fitting the system it sits in.</p>
+<h3 class="sec" id="s2"><span class="secnum">2</span>What compression cannot see</h3>
+<p>The loss shows up first as a boundary problem. A FIPS 140-3 validation<a class="ref" href="#r-fips140">[10]</a> covers a defined cryptographic module in an approved mode and says little about the product, networking, and operating system around it, and isolation is no different, since a wall does no work until you cut the holes every real deployment needs, and each hole hands back a property the wall was providing. Each is correct inside a boundary drawn for its own convenience rather than for the risk. The boundary even runs the wrong way in time. A compliance certificate attests a specific version, so a security fix inside the validated boundary can produce code that is no longer the validated version until it is reassessed. CMVP provides paths for revalidating an updated module, including expedited ones, but updates are uncommon in the public record. Of 415 validated modules read from that record, 324 show no recorded update after initial validation. An absent entry does not by itself prove none happened, but the gap is large enough that choosing validated cryptography can leave you slower to absorb a fix in the component you were being most careful about.<a class="ref" href="#r-corpus">[11]</a></p>
+
+<figure class="fig">
+<svg viewBox="0 0 1060 320" role="img" aria-labelledby="fat">
+  <title id="fat">Three cases in which a validated inner boundary leaves the consequential system outside it</title>
+  <text class="s-eyebrow" x="20" y="24">THE SAME SHAPE, THREE TIMES</text>
+
+  <g class="d-outer">
+    <rect x="20" y="46" width="320" height="180" rx="4"/>
+    <rect x="370" y="46" width="320" height="180" rx="4"/>
+    <rect x="720" y="46" width="320" height="180" rx="4"/>
+  </g>
+  <g class="d-outerlabel">
+    <text x="34" y="68">THE PRODUCT</text>
+    <text x="384" y="68">THE WORKLOAD</text>
+    <text x="734" y="68">THE AUTHORITY</text>
+  </g>
+  <g class="d-outertext">
+    <text x="34" y="90">networking, update system, OS,</text><text x="34" y="106">administration, dependencies</text>
+    <text x="384" y="90">the interfaces we deliberately</text><text x="384" y="106">exposed to the code inside</text>
+    <text x="734" y="90">who may cause a signature,</text><text x="734" y="106">and whether that remains sound</text>
+  </g>
+
+  <g class="d-inner">
+    <rect x="60" y="128" width="240" height="56" rx="3"/>
+    <rect x="410" y="128" width="240" height="56" rx="3"/>
+    <rect x="760" y="128" width="240" height="56" rx="3"/>
+  </g>
+  <g class="d-innertext">
+    <text x="180" y="152" text-anchor="middle">FIPS 140-3 module</text>
+    <text x="180" y="170" text-anchor="middle" class="sm">validated, approved mode</text>
+    <text x="530" y="152" text-anchor="middle">Enclave or hypervisor</text>
+    <text x="530" y="170" text-anchor="middle" class="sm">real property, one adversary</text>
+    <text x="880" y="152" text-anchor="middle">Certificate path</text>
+    <text x="880" y="170" text-anchor="middle" class="sm">every signature verifies</text>
+  </g>
+
+  <g class="d-miss">
+    <path d="M180 200 v22"/><path d="M530 200 v22"/><path d="M880 200 v22"/>
+    <path class="head" d="M180 234 l-7 -12 h14 z"/><path class="head" d="M530 234 l-7 -12 h14 z"/><path class="head" d="M880 234 l-7 -12 h14 z"/>
+  </g>
+  <g class="d-misslabel">
+    <text x="180" y="256" text-anchor="middle">says nothing about the</text><text x="180" y="272" text-anchor="middle">box it sits in</text>
+    <text x="530" y="256" text-anchor="middle">says nothing about what</text><text x="530" y="272" text-anchor="middle">the doors permit</text>
+    <text x="880" y="256" text-anchor="middle">says nothing about who</text><text x="880" y="272" text-anchor="middle">should have been able to</text>
+  </g>
+
+  <text class="s-caption" x="530" y="306" text-anchor="middle">The inner box is correct in all three cases. The property lives in the outer one.</text>
+</svg>
+<figcaption>Figure 4 &middot; Validation, isolation, and cryptography each establish something real and each stop at a boundary drawn for their own convenience rather than for the risk.</figcaption>
+</figure>
+
+<p>The same gap opens above the boundary. Put a key in the finest HSM money can buy and expose <code>sign(anything)</code> to a compromised caller, and the key is perfectly non-extractable while the authority it represents is wide open. What the device protects is key material, not the question of who may ask it to sign and what happens when that caller is compromised.</p>
+<p>The deeper loss is compositional, and it is where the mismatch stops being philosophical. Consider a path:</p>
+<blockquote>
+<p>internet-facing service → application identity → CI system → deployment credential → production administration → signing service</p>
+</blockquote>
+<p>The application is supposed to have its identity. The identity may legitimately reach CI. CI may legitimately hold deployment authority. Operations may legitimately administer production. Production may legitimately invoke signing. Every edge is somebody&rsquo;s intended behaviour. The composition is nobody&rsquo;s. Six teams can each examine their own edge and find nothing absurd, because the defense is built by whoever was funded to build it and the funding follows reporting lines (endpoint, identity, AppSec, cloud, network), none of which is a taxonomy of attack paths. Where an organizational boundary happens to coincide with a trust boundary the defense is good. Where they diverge, a path crossing four teams is on none of the four backlogs. The attacker has the opposite cost function. They spend almost everything on identifying and exercising the single cheapest viable route, and are adequate nowhere except along it.</p>
+
+<figure class="fig">
+<svg viewBox="0 0 1060 400" role="img" aria-labelledby="f1t">
+  <title id="f1t">A six-step attack path in which every edge is sanctioned and no team owns the path</title>
+  <text class="s-eyebrow" x="20" y="26">EVERY EDGE HAS AN OWNER AND A REASON</text>
+
+  <g class="s-owner">
+    <text x="95"  y="60" text-anchor="middle">Platform</text>
+    <text x="265" y="60" text-anchor="middle">Identity</text>
+    <text x="435" y="60" text-anchor="middle">AppSec</text>
+    <text x="605" y="60" text-anchor="middle">Cloud</text>
+    <text x="775" y="60" text-anchor="middle">SRE</text>
+    <text x="945" y="60" text-anchor="middle">PKI</text>
+  </g>
+  <g class="s-tick">
+    <path d="M95 70 v14"/><path d="M265 70 v14"/><path d="M435 70 v14"/>
+    <path d="M605 70 v14"/><path d="M775 70 v14"/><path d="M945 70 v14"/>
+  </g>
+
+  <g class="s-edgelabel">
+    <text x="180" y="170" text-anchor="middle">is supposed</text><text x="180" y="184" text-anchor="middle">to have</text>
+    <text x="350" y="170" text-anchor="middle">is supposed</text><text x="350" y="184" text-anchor="middle">to reach</text>
+    <text x="520" y="170" text-anchor="middle">is supposed</text><text x="520" y="184" text-anchor="middle">to deploy</text>
+    <text x="690" y="170" text-anchor="middle">needs authority</text><text x="690" y="184" text-anchor="middle">in</text>
+    <text x="860" y="170" text-anchor="middle">is supposed</text><text x="860" y="184" text-anchor="middle">to invoke</text>
+  </g>
+
+  <g class="s-node">
+    <rect x="20"  y="200" width="150" height="62" rx="4"/>
+    <rect x="190" y="200" width="150" height="62" rx="4"/>
+    <rect x="360" y="200" width="150" height="62" rx="4"/>
+    <rect x="530" y="200" width="150" height="62" rx="4"/>
+    <rect x="700" y="200" width="150" height="62" rx="4"/>
+    <rect x="870" y="200" width="150" height="62" rx="4" class="s-node-end"/>
+  </g>
+  <g class="s-nodetext">
+    <text x="95"  y="226" text-anchor="middle">Internet-facing</text><text x="95"  y="244" text-anchor="middle">service</text>
+    <text x="265" y="226" text-anchor="middle">Application</text><text x="265" y="244" text-anchor="middle">identity</text>
+    <text x="435" y="226" text-anchor="middle">CI</text><text x="435" y="244" text-anchor="middle">system</text>
+    <text x="605" y="226" text-anchor="middle">Deployment</text><text x="605" y="244" text-anchor="middle">credential</text>
+    <text x="775" y="226" text-anchor="middle">Production</text><text x="775" y="244" text-anchor="middle">administration</text>
+    <text x="945" y="226" text-anchor="middle" class="s-end">Signing</text><text x="945" y="244" text-anchor="middle" class="s-end">service</text>
+  </g>
+
+  <g class="s-path">
+    <path d="M170 231 H184"/><path d="M340 231 H354"/><path d="M510 231 H524"/>
+    <path d="M680 231 H694"/><path d="M850 231 H864"/>
+    <g class="s-head">
+      <path d="M178 225 l8 6 -8 6z"/><path d="M348 225 l8 6 -8 6z"/><path d="M518 225 l8 6 -8 6z"/>
+      <path d="M688 225 l8 6 -8 6z"/><path d="M858 225 l8 6 -8 6z"/>
+    </g>
+  </g>
+
+  <path class="s-brace" d="M20 300 v12 H1020 v-12"/>
+  <text class="s-caption" x="520" y="342" text-anchor="middle">The path has neither.</text>
+  <text class="s-sub" x="520" y="368" text-anchor="middle">Six owners, five sanctioned edges, and no one accountable for what they compose into.</text>
+</svg>
+<figcaption>Figure 5 &middot; Every step is somebody’s intended behaviour. The composition is nobody’s.</figcaption>
+</figure>
+
+<p>You cannot fix this by reshaping the organization until it produces the architecture you want. No org chart is isomorphic to an attack graph, which runs through vendors, SaaS, recovery paths, and temporary privileges you do not employ, and changes every time somebody grants a permission on a Tuesday afternoon.<a class="ref" href="#r-conway">[12]</a> Either the consequential paths stay unowned, or something other than a team has to hold them. This is why BloodHound<a class="ref" href="#r-bloodhound">[13]</a> mattered. The permissions were never secret; the representation was new. Put identities, privileges, and sessions into a graph and ask what they compose into, and the unit stops being the permission and becomes reachability, much closer to the attacker&rsquo;s question than to ours.</p>
+<div class="partbreak" id="pII"><span class="partnum">Part II</span><h2 class="partname">The regress</h2><p class="partgist">How the missing model turns into ever more machinery instead of the judgment that joins it.</p></div>
+<h3 class="sec" id="s3"><span class="secnum">3</span>Why the machinery keeps growing</h3>
+<p>Given a loss this shape, the industry&rsquo;s response has been to build more machinery around it, and the machinery grows in a characteristic way.</p>
+<p>For decades vendors effectively said <em>trust us</em>. Customers stopped accepting that and asked what is in it, and the SBOM is the answer the industry settled on. An accurate and current one could turn a scavenger hunt into a query when a catastrophic vulnerability lands in a widely deployed library. But presence is not what the operator needs to know. They want to know whether this vulnerability can hurt them in this deployment, which requires knowing whether the vulnerable code is even reachable, what privilege the process holds, and what a compromise of it actually gets you.</p>
+<p>So institutions convert the thing they can require into the thing they wanted to know. Does the vulnerability affect this product? Add VEX. How do you substantiate VEX? Add reachability analysis. Under which configuration? Add configuration evidence. How do you know production still matches? Add runtime attestation. Can an attacker change it? Add authorization data. Who can become that administrator? Add identity relationships. What if the IdP is compromised? Add upstream trust relationships. Is any of it still true today? Add continuous reconciliation. None of those additions is silly, which is precisely why the process can continue indefinitely. Each one serializes another piece of the missing model; none recovers the reasoning that composes the pieces into claims about the whole system.</p>
+
+<figure class="fig">
+<svg viewBox="0 0 1060 436" role="img" aria-labelledby="fct">
+  <title id="fct">Each artifact answers the previous question and raises a new one</title>
+  <text class="s-eyebrow" x="20" y="24">EVERY ANSWER IS ANOTHER ARTIFACT</text>
+
+  <g class="d-stair">
+    <path d="M40 62 H210 V104 H380 V146 H550 V188 H720 V230 H890 V272 H1040"/>
+  </g>
+  <g class="d-step">
+    <text x="46" y="54">what is in it?</text>
+    <text x="216" y="96">does it affect this product?</text>
+    <text x="386" y="138">how do you know?</text>
+    <text x="556" y="180">under which configuration?</text>
+    <text x="726" y="222">is production really like that?</text>
+    <text x="896" y="264">who can change it?</text>
+  </g>
+  <g class="d-artifact">
+    <text x="46" y="80">SBOM</text>
+    <text x="216" y="122">VEX</text>
+    <text x="386" y="164">reachability</text>
+    <text x="556" y="206">config evidence</text>
+    <text x="726" y="248">runtime attestation</text>
+    <text x="896" y="290">identity graph</text>
+  </g>
+
+  <path class="d-cont" d="M1004 300 C 1034 322 980 336 940 336 H120"/>
+  <path class="d-cont-h" d="M118 336 l13 -7 v14 z"/>
+  <text class="d-cont-t" x="540" y="358" text-anchor="middle">and what if the identity provider is compromised, and is any of it still true today, and does reconciliation see all relevant state</text>
+
+  <text class="s-caption" x="530" y="390" text-anchor="middle">Regressus ad infinitum</text>
+  <text class="s-sub" x="530" y="414" text-anchor="middle">Each step could be useful. None of them is the question anyone started with, and each is easier to fund than the judgment it stands in for.</text>
+</svg>
+<figcaption>Figure 6 &middot; Serialisation moved pieces of the knowledge around. It never abolished the judgment, and every increment was easier to institutionalise than the thing it replaced.</figcaption>
+</figure>
+
+<p>The regress also wins because it is demonstrable and good design is not. A product producing ten thousand findings a month is doing visible work and can show it continuously. The architecture that made those ten thousand events less consequential produces nothing anyone can screenshot for the quarterly review, no counter of attacks stopped, no alert queue, no dashboard turning greener. The largest buyers have started saying this out loud. In 2025 JPMorgan Chase&rsquo;s CISO told suppliers that modern integration patterns have quietly dismantled the boundaries that used to contain a compromise<a class="ref" href="#r-jpmc">[14]</a>. It is the buyer&rsquo;s side of the argument, from a buyer with unusual leverage, and it meets the same wall, because what it asks for is architectures whose properties a customer can cheaply check, which is the one thing the market cannot.</p>
+<p>Follow the regress far enough and you get a plausible end state. Every product has a current SBOM, every vulnerability has a VEX statement, every configuration is attested, every identity relationship is inventoried, every control emits evidence, every dashboard is green, and a three-step route still runs from an internet-facing service to the authority that can end the company. Nobody in the chain has necessarily done anything wrong. We have documented the insecure system extremely well.</p>
+<div class="partbreak" id="pIII"><span class="partnum">Part III</span><h2 class="partname">The turn</h2><p class="partgist">What cheap reasoning changes, and the representation it finally makes affordable.</p></div>
+<h3 class="sec" id="s4"><span class="secnum">4</span>What changed</h3>
+<p>The reasoning we compressed away is exactly the thing that is now getting cheap, which is what makes machine reasoning matter here rather than being one more tool in the pipeline. Of the three properties that kept design reasoning from being automated, two are exactly what a machine attacks, because it can hold a non-local model in view and explore counterfactuals at scale. The third, the absence of a cheap oracle, does not move at all. So it is worth being careful about which side of the ledger moves first.</p>
+<p>Consider what an attacker does looking for a path. They gather information, form a hypothesis, follow an edge, find it blocked, back up, try another, combine two facts nobody had considered together, and rank several routes by cost and consequence. Almost all of that is reasoning over a representation. Now consider what the defender does after discovering a dangerous relationship. They change an API, migrate customers, rewrite authorization, reissue credentials, alter disaster recovery, accept latency, retrain operators, coordinate four teams, and support the old architecture for another year. Almost none of that is reasoning. Machine reasoning therefore reduces the attacker&rsquo;s cost faster than it reduces the defender&rsquo;s cost of changing the system, at least in the near term, and the gap holds even if model capability stopped improving today. This is an argument from the nature of the two jobs, not a measurement, but it is the near-term asymmetry the structure predicts.</p>
+<p>There is a measurement pointing this way. Anthropic evaluated frontier models<a class="ref" href="#r-anthropic">[15]</a> building working exploits directly from disclosed patches. The counts are not the interesting number; the clock is. The first working Firefox exploit arrived in under an hour, and the release carrying the fix was still eighteen days away. Patch cadences were designed on the assumption that weaponizing a disclosed patch costs expert-weeks and that few people can do it. Tens of minutes against a release measured in weeks is a different regime. This does not mean every attacker suddenly wins, or that defenders get nothing from the same models. The near-term asymmetry is simpler. Information can move at machine speed while organizations still change at organizational speed.</p>
+<p>It would be too glib to leave it there, because defenders are pointing the same machines at their own work, and not just at finding bugs. Google now reports fixing and critic agents proposing patches in iterative loops, test-writing agents checking that a fix holds before a human sees it, and a move toward shipping security releases twice a week, with Chrome 149 and 150 together closing 1,072 security bugs, more than the previous twenty-three milestones combined<a class="ref" href="#r-chromeai">[16]</a>. The reason that loop compresses is the same reason vulnerability discovery does. It has an oracle. A fuzzer reports that an input crashed, a patch is proposed, and the system reruns the crash to confirm it is gone and nothing else broke<a class="ref" href="#r-codemender">[17]</a>. Find, triage, fix, test, and ship is becoming one machine-speed loop because every stage has checkable feedback. Deciding that an authority relationship should not exist, migrating the systems that depend on it, and accepting the residual risk acquires no oracle merely because the patch loop got faster. That is the real discontinuity. Not attacker against defender, but the loops that have a checkable answer against the architectural change that never will.</p>
+<p>Within design reasoning itself there is a ladder worth walking, because the rungs are easy to conflate. <em>Sensitive keys should be protected from extraction</em> is retrieval. <em>This application keeps the key in an environment variable, therefore application compromise discloses persistent signing authority</em> is contextual analysis. <em>A local constrained signer removes the highest-probability extraction paths at lower cost than a remote HSM, leaving host compromise as an accepted residual</em> is design-tradeoff reasoning. <em>The system only needs this long-lived authority because of the protocol we chose, and changing the protocol makes several attack paths disappear together</em> is architecture. Everything below the last rung makes the existing machine faster; only the last rung changes what the machine is for.</p>
+
+<figure class="fig">
+<svg viewBox="0 0 1060 436" role="img" aria-labelledby="fft">
+  <title id="fft">Five rungs of machine reasoning with a discontinuity before the last</title>
+  <text class="s-eyebrow" x="20" y="24">THE RUNG THAT MATTERS IS THE LAST ONE</text>
+
+  <g class="d-rung">
+    <rect x="60" y="322" width="600" height="46" rx="3"/>
+    <rect x="60" y="266" width="600" height="46" rx="3"/>
+    <rect x="60" y="210" width="600" height="46" rx="3"/>
+    <rect x="60" y="154" width="600" height="46" rx="3"/>
+    <rect x="60" y="70"  width="600" height="46" rx="3" class="top"/>
+  </g>
+  <g class="d-rungtext">
+    <text x="80" y="350">Local generation</text><text x="640" y="350" text-anchor="end" class="sm">nearby context</text>
+    <text x="80" y="294">Task completion</text><text x="640" y="294" text-anchor="end" class="sm">by brute-force iteration</text>
+    <text x="80" y="238">Model-based engineering</text><text x="640" y="238" text-anchor="end" class="sm">fewer loops, more model</text>
+    <text x="80" y="182">Adversarial system reasoning</text><text x="640" y="182" text-anchor="end" class="sm">the object stops being code</text>
+    <text x="80" y="98"  class="hi">Design optimisation</text><text x="640" y="98" text-anchor="end" class="sm hi">should it be shaped this way at all</text>
+  </g>
+
+  <path class="d-cut" d="M40 146 H1040"/>
+  <text class="d-cut-t" x="44" y="132">iteration is unavailable above this line</text>
+
+  <g class="d-brace">
+    <path d="M690 70 h16 v46"/>
+    <path d="M690 368 h16 V154"/>
+  </g>
+  <text class="d-side" x="720" y="94">changes what</text><text class="d-side" x="720" y="112">the machine is for</text>
+  <text class="d-side muted" x="720" y="254">makes the existing</text><text class="d-side muted" x="720" y="272">machine faster</text>
+
+  <text class="s-sub" x="530" y="398" text-anchor="middle">You cannot reach a trust-boundary decision by trying it in production and watching it fail.</text>
+  <text class="s-sub" x="530" y="416" text-anchor="middle">Competence that comes from the model, rather than from the loop, is the thing to watch.</text>
+</svg>
+<figcaption>Figure 7 &middot; The informative axis is method rather than size. A system that only gets there by iterating never reaches the top rung, because the top rung is the one where you do not get to iterate.</figcaption>
+</figure>
+
+<p>It is worth being precise about why cheap search does not become cheap design. A great deal of security work has a cheap correctness witness. A fuzzer has one, because the target crashes or returns memory it should not have, and so do patch-derived exploits and much automated remediation, where rerunning the crash tells you whether the fix held. Anything with a defined space and a checkable answer rewards raw search, and machines are extraordinary at it, which is the whole of what the leaderboard-topping agents do. But the witness is a property of the question, not of the word <em>vulnerability</em>. Authorization logic, protocol design, confused deputies, and many abuse cases share the hard core that architecture has, and conversely, once someone states an architectural property precisely, that <em>a compromised renderer must not read another origin&rsquo;s data</em>, much of the rest can be searched, tested, or even model-checked. The expensive act is not the search. It is choosing the property in the first place, deciding what authority should exist, what consequence is acceptable, and which tradeoff is justified, given what the system is for and what cannot be lost. That is a counterfactual measured against intent, and intent appears in no artifact and has no external oracle. You cannot try a trust boundary in production and watch it fail, because the failure is the loss you were preventing. Search settles what follows from a property. Judgment settles which property is worth holding, and no amount of search answers that.</p>
+
+<figure class="fig">
+<svg viewBox="0 0 1060 400" role="img" aria-labelledby="fsdt">
+  <title id="fsdt">Two problems side by side: searching a bounded defect space with an oracle, and drawing a boundary that bounds what a compromise reaches</title>
+
+  <line x1="525" y1="40" x2="525" y2="362" stroke="var(--rule)" stroke-width="1.25"/>
+
+  <text class="s-panelhead" x="20" y="26">WHERE A CRASH CAN SETTLE IT</text>
+  <text class="s-eyebrow accent" x="20" y="44">SPACE EXHAUSTION</text>
+
+  <rect x="48" y="82" width="150" height="118" fill="var(--accent)" opacity=".07"/>
+  <g class="s-cell">
+    <circle class="off" cx="70"  cy="100" r="5"/><circle class="off" cx="120" cy="100" r="5"/><circle class="off" cx="170" cy="100" r="5"/><circle class="off" cx="220" cy="100" r="5"/><circle class="off" cx="270" cy="100" r="5"/><circle class="off" cx="320" cy="100" r="5"/>
+    <circle class="off" cx="70"  cy="140" r="5"/><circle class="off" cx="120" cy="140" r="5"/><circle class="on"  cx="170" cy="140" r="5"/><circle class="off" cx="220" cy="140" r="5"/><circle class="off" cx="270" cy="140" r="5"/><circle class="off" cx="320" cy="140" r="5"/>
+    <circle class="off" cx="70"  cy="180" r="5"/><circle class="on"  cx="120" cy="180" r="5"/><circle class="off" cx="170" cy="180" r="5"/><circle class="off" cx="220" cy="180" r="5"/><circle class="off" cx="270" cy="180" r="5"/><circle class="off" cx="320" cy="180" r="5"/>
+  </g>
+  <g class="s-owner"><text x="123" y="216" text-anchor="middle">the defect space</text></g>
+
+  <line x1="345" y1="140" x2="384" y2="140" stroke="var(--ink-soft)" stroke-width="1.5"/>
+  <g class="s-node"><rect x="386" y="118" width="96" height="44" rx="4"/></g>
+  <g class="s-nodetext"><text x="434" y="145" text-anchor="middle">ORACLE</text></g>
+  <text class="s-sub" x="434" y="182" text-anchor="middle">a crash confirms a hit</text>
+
+  <text class="s-sub" x="250" y="300" text-anchor="middle">A bounded space, a checkable oracle.</text>
+  <g class="s-legend"><text x="20" y="352">fuzzers, XBOW, AIxCC</text></g>
+
+  <text class="s-panelhead" x="560" y="26">WHERE ONLY INTENT CAN</text>
+  <text class="s-eyebrow accent" x="560" y="44">JUDGMENT ABOUT SHAPE</text>
+
+  <rect x="586" y="98" width="150" height="104" rx="6" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text class="s-sub" x="661" y="88" text-anchor="middle" style="fill:var(--accent)">a boundary the design draws</text>
+
+  <line x1="620" y1="150" x2="694" y2="122" stroke="var(--accent)" stroke-width="1.75"/>
+  <line x1="620" y1="150" x2="694" y2="180" stroke="var(--accent)" stroke-width="1.75"/>
+  <line x1="700" y1="122" x2="792" y2="122" stroke="var(--removed)" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <line x1="700" y1="180" x2="792" y2="180" stroke="var(--removed)" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <line x1="806" y1="128" x2="862" y2="146" stroke="var(--removed)" stroke-width="1.5"/>
+  <line x1="806" y1="176" x2="862" y2="156" stroke="var(--removed)" stroke-width="1.5"/>
+
+  <circle cx="694" cy="122" r="12" fill="var(--accent)" opacity=".18" stroke="var(--accent)" stroke-width="1.5"/>
+  <circle cx="694" cy="180" r="12" fill="var(--accent)" opacity=".18" stroke="var(--accent)" stroke-width="1.5"/>
+  <circle cx="800" cy="122" r="12" fill="var(--paper)" stroke="var(--removed)" stroke-width="1.5"/>
+  <circle cx="800" cy="180" r="12" fill="var(--paper)" stroke="var(--removed)" stroke-width="1.5"/>
+  <circle cx="872" cy="151" r="12" fill="var(--paper)" stroke="var(--removed)" stroke-width="1.5"/>
+  <circle cx="620" cy="150" r="18" fill="var(--accent)"/>
+  <text x="620" y="154" text-anchor="middle" style="font-family:var(--sans);font-size:11px;fill:#fff">taken</text>
+
+  <text class="s-sub" x="661" y="230" text-anchor="middle">what it can reach</text>
+  <text class="s-sub" x="836" y="230" text-anchor="middle" style="fill:var(--removed)">beyond the boundary</text>
+
+  <text class="s-sub" x="800" y="300" text-anchor="middle">No space, no oracle. What should the taken part reach?</text>
+  <g class="s-legend"><text x="560" y="352">the design decision</text></g>
+</svg>
+<figcaption>Figure 8 &middot; Two different problems. On the left, when a problem has a bounded space and a crash says when you have won, machines are extraordinary at it. On the right there is no external oracle at all, only a judgment about what a compromise should be allowed to reach, and that judgment is what sets how far the inevitable bug gets.</figcaption>
+</figure>
+
+<p>That is why the top rung resists brute force. Design reasoning means holding a model of the system and interrogating it, so a system that only arrives at good answers by iterating against feedback will never reach it, while one whose competence comes from the model might. Whether today&rsquo;s systems can is genuinely open. They reason impressively over bounded technical problems, while maintaining a reliable model of a large, evolving organization and making good architectural tradeoffs inside it remains much harder. The reason to care is not that a machine would replace the architect. It is that the architect&rsquo;s reasoning would become something a buyer, an auditor, or an underwriter could inspect.</p>
+<h3 class="sec" id="s5"><span class="secnum">5</span>What scaling security design would require</h3>
+<p>We already know what happens when the right representation makes an expensive reasoning problem cheap. Joern<a class="ref" href="#r-joern">[18]</a> constructs Code Property Graphs so properties of large codebases can be explored through queries rather than reconstructed by hand, CodeQL<a class="ref" href="#r-codeql">[19]</a> does something similar, and BloodHound does it for identity relationships. Each is incomplete for this problem and each demonstrates the same trick. A better representation converts reasoning that was artisanal into reasoning that is merely a query. None of them answers a security question; all of them changed what it costs to ask one. Some reach design directly. Privtrans automatically partitioned programs for privilege separation in 2004<a class="ref" href="#r-privtrans">[20]</a>, and later work made the cut quantitative, choosing where to draw the boundary that removes the most privilege for the least cost. The mechanism has been automatable for two decades, and what none of it supplies is the judgment for which boundary is worth its cost here.</p>
+<p>Every one of them also begins too late, because it starts from something already built. Before the code there was a decision about what the system should permit. Before the IAM permission there was a decision that a principal should hold some authority. Before the private key there was a protocol that required persistent signing authority. A representation that starts earlier lays a design claim out as a sequence. The <strong>property</strong> somebody decided must remain true. The <strong>authority model</strong> it depends on, which is to say who can cause what. The <strong>design decision</strong> taken to make the property hold, with the alternatives considered and rejected. The <strong>assumptions</strong> that decision rests on, written down so they can be checked rather than silently inherited. The <strong>evidence</strong> that bears on those assumptions, drawn from the artifacts the system already emits. The <strong>attempted falsification</strong> that keeps looking for the case where the claim breaks, together with the conditions under which it would stop holding, which is the piece compression always drops and the only one that lets the representation invalidate itself. And last the <strong>residual risk</strong> knowingly accepted, which a rule never records because it has no way to say <em>and we decided this was fine</em>. None of these is a property of the code or a row in a control matrix. They are claims about the system that can be true or false independently of whether the usual scanners are green.</p>
+
+<figure class="fig">
+<svg viewBox="0 0 1060 470" role="img" aria-labelledby="f2t">
+  <title id="f2t">Five candidate designs for one security property, compared by which attack paths each removes</title>
+  <text class="s-eyebrow" x="20" y="26">DESIRED PROPERTY</text>
+  <text class="s-prop" x="20" y="54">Compromise of the application must not disclose persistent signing authority.</text>
+
+  <g class="s-colhead">
+    <text x="470" y="104" text-anchor="middle">app compromise</text><text x="470" y="118" text-anchor="middle">discloses key</text>
+    <text x="610" y="104" text-anchor="middle">host compromise</text><text x="610" y="118" text-anchor="middle">discloses key</text>
+    <text x="750" y="104" text-anchor="middle">app compromise</text><text x="750" y="118" text-anchor="middle">signs arbitrarily</text>
+    <text x="880" y="104" text-anchor="middle">long-lived key</text><text x="880" y="118" text-anchor="middle">exists at all</text>
+    <text x="990" y="111" text-anchor="middle">cost</text>
+  </g>
+  <path class="s-rule" d="M20 132 H1040"/>
+
+  <g class="s-rowlabel">
+    <text x="20" y="171">Key in an environment variable</text>
+    <text x="20" y="229">Separate signer process, same host</text>
+    <text x="20" y="287">Separate signer host</text>
+    <text x="20" y="345">Remote KMS or HSM</text>
+    <text x="20" y="403">Protocol redesign, no long-lived key</text>
+  </g>
+
+  <g class="s-cell">
+    <circle cx="470" cy="165" r="9" class="on"/>  <circle cx="610" cy="165" r="9" class="on"/>  <circle cx="750" cy="165" r="9" class="on"/>  <circle cx="880" cy="165" r="9" class="on"/>
+    <circle cx="470" cy="223" r="9" class="off"/> <circle cx="610" cy="223" r="9" class="on"/>  <circle cx="750" cy="223" r="9" class="on"/>  <circle cx="880" cy="223" r="9" class="on"/>
+    <circle cx="470" cy="281" r="9" class="off"/> <circle cx="610" cy="281" r="9" class="off"/> <circle cx="750" cy="281" r="9" class="on"/>  <circle cx="880" cy="281" r="9" class="on"/>
+    <circle cx="470" cy="339" r="9" class="off"/> <circle cx="610" cy="339" r="9" class="off"/> <circle cx="750" cy="339" r="9" class="on"/>  <circle cx="880" cy="339" r="9" class="on"/>
+    <circle cx="470" cy="397" r="9" class="off"/> <circle cx="610" cy="397" r="9" class="off"/> <circle cx="750" cy="397" r="9" class="off"/> <circle cx="880" cy="397" r="9" class="off"/>
+  </g>
+
+  <g class="s-cost">
+    <rect x="950" y="160" width="14" height="10"/>
+    <rect x="950" y="218" width="24" height="10"/>
+    <rect x="950" y="276" width="46" height="10"/>
+    <rect x="950" y="334" width="72" height="10"/>
+    <rect x="950" y="392" width="90" height="10" class="s-cost-alt"/>
+  </g>
+
+  <path class="s-rule faint" d="M20 425 H1040"/>
+  <g class="s-legend">
+    <circle cx="28" cy="450" r="7" class="on"/><text x="44" y="455">path remains</text>
+    <circle cx="164" cy="450" r="7" class="off"/><text x="180" y="455">path removed</text>
+    <text x="1040" y="455" text-anchor="end" class="s-sub">The last row changes the problem rather than the storage.</text>
+  </g>
+</svg>
+<figcaption>Figure 9 &middot; One property, five candidate architectures. Each removes some paths, leaves others, and costs differently. None of them is &ldquo;the secure option.&rdquo;</figcaption>
+</figure>
+
+<p>It is a design tool, not a documentation tool. Take the property <em>compromise of the application must not disclose persistent signing authority</em>. No product is named in that sentence, and the candidates become comparable against it. The environment-variable design yields <code>app compromise → key disclosure → persistent signing authority</code>. A separately permissioned local signer removes direct key disclosure but leaves host compromise. Moving the signer to another host removes another path. A remote KMS or HSM removes more extraction paths while leaving a compromised authorized caller able to exercise signing. A protocol redesign that eliminates the long-lived key removes the question entirely. Each option carries a different cost and a different residual, the reasoning the control cliff destroyed, made explicit enough to compare.</p>
+<p>Once a decision is represented this way, reality can disagree with it. Say the team takes the local signer because a remote KMS is not justified by the residual host-compromise risk. The design now carries three assertions. The application cannot read key material, the signing interface accepts only transaction-shaped payloads, and the signer identity cannot be assumed from the workforce identity plane. Each is falsifiable by evidence somebody is already collecting. Code analysis finds a crash-dump endpoint that maps the signer&rsquo;s memory. A runtime trace shows the interface accepting an arbitrary byte string from an integration harness that shipped by accident. The IAM graph finds a break-glass role granting assume rights to on-call, and on-call is a workforce group. Three contradictions, and nobody had to imagine the attack in advance. The design said what had to remain true and the implementation disagreed in three places.</p>
+
+<figure class="fig">
+<svg viewBox="0 0 1060 480" role="img" aria-labelledby="f3t">
+  <title id="f3t">A loop in which design asserts what must remain true and implementation evidence contradicts it</title>
+
+  <text class="s-eyebrow" x="20" y="26">WHAT WE ASSERT MUST REMAIN TRUE</text>
+  <text class="s-eyebrow accent" x="1040" y="412" text-anchor="end">WHAT THE SYSTEM ACTUALLY DOES</text>
+
+  <g class="s-node">
+    <rect x="30"  y="80"  width="180" height="60" rx="4"/>
+    <rect x="290" y="80"  width="180" height="60" rx="4"/>
+    <rect x="550" y="80"  width="180" height="60" rx="4"/>
+    <rect x="820" y="200" width="200" height="60" rx="4"/>
+    <rect x="550" y="330" width="180" height="60" rx="4"/>
+    <rect x="250" y="330" width="200" height="60" rx="4" class="s-node-alert"/>
+  </g>
+  <g class="s-nodetext">
+    <text x="120" y="107" text-anchor="middle">Desired security</text><text x="120" y="125" text-anchor="middle">property</text>
+    <text x="380" y="116" text-anchor="middle">Threat model</text>
+    <text x="640" y="116" text-anchor="middle">Design</text>
+    <text x="920" y="236" text-anchor="middle">Implementation</text>
+    <text x="640" y="366" text-anchor="middle">Observation</text>
+    <text x="350" y="366" text-anchor="middle" class="s-alert">Contradiction</text>
+  </g>
+
+  <g class="s-flow">
+    <path d="M210 110 H278"/><path d="M470 110 H538"/>
+    <path d="M730 110 C 800 110 820 150 830 194"/>
+    <g class="s-head">
+      <path d="M272 104 l8 6 -8 6z"/><path d="M532 104 l8 6 -8 6z"/><path d="M824 188 l8 12 -13 2z"/>
+    </g>
+  </g>
+
+  <g class="s-flow back">
+    <path d="M880 260 C 860 316 800 360 738 360"/>
+    <path d="M550 360 H462"/>
+    <path d="M250 360 C 150 360 150 200 300 145"/>
+    <g class="s-head">
+      <path d="M744 354 l-10 6 10 6z"/><path d="M468 354 l-10 6 10 6z"/><path d="M296 152 l12 -8 2 13z"/>
+    </g>
+    <text class="s-flowlabel" x="600" y="410" text-anchor="middle">evidence argues back</text>
+    <text class="s-flowlabel" x="150" y="250" text-anchor="middle">redesign</text>
+  </g>
+
+  <text class="s-sub" x="530" y="456" text-anchor="middle">The threat model stops being a launch document and becomes a hypothesis the system can falsify.</text>
+</svg>
+<figcaption>Figure 10 &middot; Design asserts what must remain true; implementation, observation, and contradiction get to disagree.</figcaption>
+</figure>
+
+<p>That is where design and continuous assurance finally connect. Design says what must remain true, assurance asks whether reality still supports the claim, and continuous assurance without continuous design is a faster way to prove the wrong architecture is behaving exactly as specified. The danger is obvious enough to name before anyone builds it. The instant this becomes <em>Design Graph Coverage: 94%</em>, with a standard, a procurement mandate, and an audit test for currency, we have invented the next SBOM. The defense is in what the representation is for. It is not <em>here is the graph, therefore we understand the system</em>, but <em>here is what we currently believe about the system; find the shortest path that proves us wrong</em>. A representation optimized to be attacked is harder to game than one optimized to be certified, because its success is expressed as surviving attempts to contradict it rather than as a coverage number to hit.</p>
+<p>There is a harder objection than institutionalization, and it is worth meeting directly. The reasoning may be getting cheap, but the representation might not. Building an accurate map of principals, authorities, assumptions, and residuals, and keeping it true as the system changes every Tuesday, could cost more than reasoning over it ever did. And an incomplete map is worse than none, because it reassures. The asymmetry is the one that has run through this essay. The attacker needs a single edge the map is missing; the defender is lulled by a graph that looks complete. Cheap reasoning over a wrong model produces confident, sophisticated, wrong answers.</p>
+<p>It helps to see what the representation is made of, because the cost is not what it first appears. The organization already holds most of the facts the map needs, in its code, its identity graph, its configuration, its architecture documents, and its operators&rsquo; memory. The attacker has to reconstruct all of that from outside and against resistance, while the defender starts out owning it. What the defender has never had is those facts in a single representation a machine can reason over, rather than scattered across a dozen that do not compose or living nowhere but in someone&rsquo;s head. So the task is not to build an omniscient model of the system from nothing. It is to make an advantage the defender already has cheap enough to compute, before an adversary maps the same ground faster than the defender ever instrumented it<a class="ref" href="#r-redteam">[21]</a>. That does not make the map cheap to keep true, which is the harder half of the problem, but it does say where the map comes from.</p>
+<p>This is the deeper reason to build the representation to be attacked, and it takes two kinds of attack, not one. One searches the model for a path that violates the property. That search is only ever as good as the model, because no search over a graph can find an edge the graph does not contain, so by itself it can interrogate the wrong world with great thoroughness. The other attacks the model itself, reconciling it against evidence gathered independently of it, the code, the runtime traces, the identity graph, the configuration, the recovery paths, and counting anything they contain that the model cannot explain as a contradiction. That second attack is the one that catches the forgotten recovery system wired to root, because the finding does not originate in the model at all. It originates in a witness the model has to answer to, which is exactly what the three contradictions above already were. Completeness is not the bar and never will be, because no map of a living system is ever complete. The bar is whether the model can be falsified from both directions and whether something is continuously trying, so a missing edge surfaces not as a gap the search politely steps over but as a place where reality refuses to match the map. The proposal does not promise a correct picture of the system. It promises one that fails loudly, which is the only kind worth having, and the only kind cheap reasoning makes affordable to keep attacking.</p>
+<p>None of this makes controls obsolete. If machine reasoning reaches architecture, today&rsquo;s artifacts move back into their proper position as premises. The SBOM becomes evidence about composition, the identity graph evidence about authority, runtime traces evidence about interaction. None of them has to pretend to be security, which makes the pipelines more valuable rather than less. And the questions change with them. Instead of <em>do we have an HSM</em>, which extraction and signing-abuse paths remain. Instead of <em>do we have an SBOM</em>, which component failures create reachable paths in this deployment. Instead of <em>is this system compliant</em>, which claims about its security properties the available evidence can falsify.</p>
+<p>A design system worth having argues back. Propose an HSM and it asks what happens when the authorized caller is compromised. Propose network isolation and it finds the management plane crossing the boundary. Propose MFA and it inspects recovery. Propose doing nothing and it tells you which fact would make that irrational. That does not replace human judgment; it concentrates it where it belongs (materiality, business intent, proportionality, acceptance of residual risk) and hands the machine the part it may become extraordinarily good at, which is holding more relationships at once, searching more paths, and continuously trying to prove the current answer wrong. It also changes who can be answerable for the result. A residual risk that lived only in an expert&rsquo;s head could not be signed, priced, or handed to anyone. A residual risk written as a property, a decision, and an invalidation condition can be attached to the engineer who accepted it, to the auditor who tests whether its assumptions still hold, and to the insurer who finally has something to price. The scarce thing was never the willingness to be accountable, nor even the facts. It was a representation of the architecture cheap enough for anyone to check.</p>
+<p>We never stopped knowing how to do security design. We could not afford to apply the reasoning everywhere, so we compressed the results into standards, controls, patterns, certifications, checklists, findings, and artifacts. That was rational, and it let a small number of experts influence systems they could never personally review. The attacker never had to use the compression. They always got the real system (the identities, dependencies, trust relationships, configuration, recovery mechanisms, forgotten permissions, and ordinary decisions that compose into a path), and they searched it.</p>
+<p>Cheap reasoning will make that asymmetry hurt before it helps, because searching a system gets cheaper before changing one does. But the rationing that produced all of this was never a law of computing. It was a price, and prices move.</p>
+<h3 class="tail" id="sources">Sources</h3>
+<p>Links are given where I verified them. Entries without a link are cited by identifier only.</p>
+<ol class="srclist"><li id="r-privsep" value="1">Provos, N., Friedl, M. and Honeyman, P., <a href="https://www.usenix.org/legacy/event/sec03/tech/full_papers/provos_et_al/provos_et_al.pdf"><em>Preventing Privilege Escalation</em></a>, 12th USENIX Security Symposium, 2003. Privilege separation in OpenSSH, and the reasoning behind it.</li>
+<li id="r-heartbleed" value="2">CVE-2014-0160, the <a href="https://nvd.nist.gov/vuln/detail/cve-2014-0160">Heartbleed</a> buffer over-read in OpenSSL&rsquo;s TLS heartbeat extension, disclosed April 2014. NVD base score 5.0 Medium under CVSS v2, later 7.5 High under v3.1.</li>
+<li id="r-chromium" value="3">Barth, A., Jackson, C. and Reis, C., <em>The Security Architecture of the Chromium Browser</em>, 2009. Multi-process sandboxing that isolates the renderer from the operating system.</li>
+<li id="r-siteiso" value="4">Reis, C., Moshchuk, A. and Oikonomou, N., <a href="https://www.usenix.org/system/files/sec19-reis.pdf"><em>Site Isolation: Process Separation for Web Sites within the Browser</em></a>, USENIX Security 2019, a roughly five-year effort, and Google, <a href="https://security.googleblog.com/2018/07/mitigating-spectre-with-site-isolation.html"><em>Mitigating Spectre with Site Isolation</em></a>, enabled by default in Chrome 67, July 2018.</li>
+<li id="r-borg" value="5">Verma, A. et al., <a href="https://research.google/pubs/large-scale-cluster-management-at-google-with-borg/"><em>Large-scale cluster management at Google with Borg</em></a>, EuroSys 2015. The platform whose isolation and lifecycle model became the basis for Kubernetes.</li>
+<li id="r-ios" value="6">Apple, <a href="https://support.apple.com/guide/security/welcome/web"><em>Apple Platform Security</em></a>. The app sandbox, mediated access between apps, and the assumption that processes can be suspended or terminated at any time.</li>
+<li id="r-agentic" value="7">Google, <a href="https://blog.google/security/architecting-security-for-agentic/"><em>Architecting security for agentic AI</em></a>, 2026. A user-alignment critic kept away from untrusted web content, and Agent Origin Sets that separate the origins an agent may read from the ones it may act on.</li>
+<li id="r-saltzer" value="8">Saltzer, J. H. and Schroeder, M. D., <em>The Protection of Information in Computer Systems</em>, Proceedings of the IEEE 63(9), 1975. Least privilege, complete mediation, separation of privilege, and unwanted access paths. <a href="https://www.cs.virginia.edu/~evans/cs551/saltzer/">Full text</a> · doi:10.1109/PROC.1975.9939</li>
+<li id="r-nist160" value="9">Ross, R., Winstead, M. and McEvilley, M., <em>Engineering Trustworthy Secure Systems</em>, <a href="https://csrc.nist.gov/pubs/sp/800/160/v1/r1/final">NIST SP 800-160 Vol. 1 Rev. 1</a>, November 2022. Systems security engineering as a subdiscipline of systems engineering.</li>
+<li id="r-fips140" value="10">NIST FIPS 140-3, <em>Security Requirements for Cryptographic Modules</em>. The cryptographic boundary, approved modes, and the operational environment outside it.</li>
+<li id="r-corpus" value="11">Hurst, R., <a href="https://rmhrisk.github.io/fips-140-3-corpus/"><em>FIPS 140-3 Validation, in Practice</em></a>, 2026. A near-census of 415 validated modules read from the public CMVP record, covering what the boundary excludes and how the certified state ages.</li>
+<li id="r-conway" value="12">Conway, M. E., <a href="https://www.melconway.com/Home/pdf/committees.pdf"><em>How Do Committees Invent?</em></a>, Datamation 14(5), April 1968. Organizations are constrained to produce designs that copy their own communication structures.</li>
+<li id="r-bloodhound" value="13">SpecterOps, <a href="https://specterops.io/opengraph/">BloodHound OpenGraph</a> and the <a href="https://bloodhound.specterops.io/get-started/introduction">BloodHound documentation</a>. Attack-path analysis over identities and privileges.</li>
+<li id="r-jpmc" value="14">Opet, P., <a href="https://www.jpmorganchase.com/about/technology/blog/open-letter-to-our-suppliers"><em>An open letter to our suppliers</em></a>, JPMorgan Chase, April 2025. A major buyer arguing that suppliers ship features faster than security and that modern integration patterns have dismantled the boundaries that once contained a compromise.</li>
+<li id="r-anthropic" value="15">Anthropic, <a href="https://www.anthropic.com/research/n-days">Measuring LLMs&rsquo; impact on N-day exploits</a>, June 2026. Firefox and Windows kernel evaluations, and the collapse of the reverse-engineering bottleneck.</li>
+<li id="r-chromeai" value="16">Google, <a href="https://blog.google/security/chrome-stronger-with-every-update/"><em>Chrome is stronger with every update</em></a>, 2026. AI applied across discovery, triage, patch generation, and testing; Chrome 149 and 150 together fixing 1,072 security bugs, more than the previous twenty-three milestones combined, alongside a move to more frequent security releases.</li>
+<li id="r-codemender" value="17">Google, <a href="https://blog.google/security/from-finding-to-fixing-reducing-maintainer-burden-with-automated-patches/"><em>From finding to fixing: reducing maintainer burden with automated patches</em></a>, 2026. CodeMender treating an OSS-Fuzz crash as an oracle, generating a root-cause patch and verifying that the crash is resolved without regressing other tests.</li>
+<li id="r-joern" value="18"><a href="https://docs.joern.io/">Joern</a> and the <a href="https://cpg.joern.io/">Code Property Graph specification</a>, after Yamaguchi, F. et al., <em>Modeling and Discovering Vulnerabilities with Code Property Graphs</em>, IEEE S&amp;P 2014.</li>
+<li id="r-codeql" value="19">GitHub, CodeQL. Extracting a queryable representation of code including syntax, control flow, and data flow.</li>
+<li id="r-privtrans" value="20">Brumley, D. and Song, D., <a href="https://www.usenix.org/legacy/events/sec04/tech/full_papers/brumley/brumley_html/paper.html"><em>Privtrans: Automatically Partitioning Programs for Privilege Separation</em></a>, 13th USENIX Security Symposium, 2004. Automatic privilege separation, later made quantitative by Liu et al., <em>Program-mandering</em>, ACM CCS 2019.</li>
+<li id="r-redteam" value="21">Fabian, D., <a href="https://blog.google/security/the-evolving-role-of-the-red-team-in-the-era-of-agentic-security/"><em>The evolving role of the red team in the era of agentic security</em></a>, Google, August 2026. Reconnaissance and lateral movement approaching machine time, and defenders&rsquo; home-field knowledge of their own environment as an advantage that has to be instrumented before an adversary maps it faster.</li></ol>
+  </article>
+
+  <div class="quiz" id="quiz">
+    <h3 class="tail">&#10003; Check your understanding</h3>
+    <p class="qintro">Ten questions on controls, composition, and what cheap reasoning changes. Options shuffle every run.</p>
+    <div id="qbox"><button class="qbtn" id="qstart">Start the quiz</button></div>
+  </div>
+</main>
+
+<footer class="foot">
+  <p class="related">Companion piece, <a href="https://rmhrisk.github.io/continuous-assurance/">Why Continuous Assurance Did Not Happen Until Now</a>, on the same cost structure in assurance.</p>
+  <p class="related">Related &middot; <a href="https://unmitigatedrisk.com/">Unmitigated Risk</a>, essays on PKI, privacy, and digital identity &middot; <a href="https://rmhrisk.github.io/classical-webpki/">A Deep Dive on the Classical WebPKI</a> &middot; <a href="https://rmhrisk.github.io/pq-webpki/">The Post-Quantum WebPKI</a> &middot; <a href="https://rmhrisk.github.io/containing-the-optimizer/">Containing the Optimizer</a> &middot; <a href="https://rmhrisk.github.io/assurance-model/">The Assurance Model Was Built for a World That No Longer Exists</a> &middot; <a href="https://rmhrisk.github.io/fips-140-3-corpus/">FIPS 140-3 Validation, in Practice</a></p>
+</footer>
+
+<script>
+const QUESTIONS = [
+  { q: "Two services link the same OpenSSL and both are hit by Heartbleed. What decides whether one loses its private key and the other does not?",
+    a: "How the system was arranged around the controls, which secrets shared the address space",
+    w: ["The CVSS base score of the vulnerability", "Whether the SBOM was current", "Which team patched faster"],
+    e: "Same library, same CVE, same deadline. The residual is set by the architecture, not by any instrument in the pipeline." },
+  { q: "In this essay, what is a security control?",
+    a: "A cached answer to a security-design question, with the reasoning that produced it discarded",
+    w: ["A guarantee that a property holds", "A test an auditor performs on a schedule", "A product a vendor sells"],
+    e: "We scaled security by distributing the answers and dropping the threat model and context behind them." },
+  { q: "What two things does the compression drop every time?",
+    a: "The threat model that justified the control, and the condition under which it stops applying",
+    w: ["The vendor name and the price", "The owner and the audit deadline", "The SBOM and the CVE record"],
+    e: "Those two are exactly what you need to know whether a control is still doing its job in this deployment." },
+  { q: "Why can choosing a FIPS-validated module leave you slower to fix a disclosed vulnerability?",
+    a: "The compliance certificate pins a specific version, so a fix ships code that is no longer the validated version until it is reassessed",
+    w: ["Validated modules simply contain more bugs", "FIPS forbids patching altogether", "The module can never be changed once shipped"],
+    e: "Of 415 validated modules read from the public record, 324 had no recorded update after initial validation." },
+  { q: "Encryption at rest passes every check, yet an over-privileged service account still walks off with the data. Why?",
+    a: "Its threat model is physical, so against a caller holding valid credentials it is not defeated, it is simply not present",
+    w: ["It was implemented incorrectly", "The encryption key was too short", "The auditor forgot to test it"],
+    e: "The control removes none of the paths that actually take the data, while still satisfying the questionnaire." },
+  { q: "Why does a path like service to identity to CI to deploy to production to signing survive so much spending?",
+    a: "Every edge is somebody's intended behaviour and no single team owns the composition",
+    w: ["Each edge is an obvious misconfiguration", "The path violates a named, audited control", "It only works on unpatched systems"],
+    e: "Defense follows reporting lines, so a path crossing four teams sits on none of their backlogs." },
+  { q: "Why does the machinery keep growing, from SBOM to VEX to reachability to runtime attestation and on?",
+    a: "Each artifact serializes another piece of the missing model without recovering the judgment that joins the pieces",
+    w: ["Vendors are being dishonest", "Regulation mandates every one of them", "The individual tools do not work"],
+    e: "Every increment can be justified on its own terms, which is exactly why the regress can continue indefinitely." },
+  { q: "Why does cheap machine reasoning help attackers before it helps defenders?",
+    a: "Attacking is almost all reasoning over a representation, while defending is mostly changing systems, which stays slow",
+    w: ["Attackers simply have better models", "Defenders are not permitted to use the models", "The models can only write exploits"],
+    e: "Searching a system gets cheaper before changing one does, even if model capability froze today." },
+  { q: "On the reasoning ladder, which rung changes what the machine is for rather than just making it faster?",
+    a: "Architecture, asking why the system needs the long-lived authority at all",
+    w: ["Retrieving the relevant rule", "Analysing the current configuration in context", "Generating findings more quickly"],
+    e: "Everything below the top rung makes the existing machine faster; only the top rung changes its purpose." },
+  { q: "What keeps the proposed design representation from becoming the next SBOM?",
+    a: "It is built to be attacked, not certified, and asks for the shortest path that proves the current belief wrong",
+    w: ["A coverage percentage and an audit test for currency", "A procurement mandate behind it", "A dashboard that turns green"],
+    e: "A representation optimised to be attacked resists institutionalisation in a way one optimised to be certified does not." },
+];
+
+function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
+
+const qbox = document.getElementById("qbox");
+let idx = 0, score = 0, deck = [], selected = -1, revealed = false;
+
+function startQuiz() {
+  idx = 0; score = 0;
+  deck = QUESTIONS.map(item => ({
+    q: item.q, e: item.e,
+    opts: shuffle([{ t: item.a, ok: true }, ...item.w.map(t => ({ t, ok: false }))]),
+  }));
+  renderQuestion();
+}
+
+function renderQuestion() {
+  selected = -1; revealed = false;
+  const item = deck[idx];
+  qbox.innerHTML = "<div class='q-progress'>Question " + (idx + 1) + " of " + deck.length +
+    " &middot; Score " + score + "</div>" +
+    "<div class='q-question'>" + item.q + "</div>" +
+    item.opts.map((o, j) => "<button class='q-opt' data-j='" + j + "'>" + o.t + "</button>").join("") +
+    "<div class='q-explain' id='qexp' style='display:none'></div>" +
+    "<button class='qbtn' id='qact' disabled>Check answer</button>";
+  qbox.querySelectorAll(".q-opt").forEach(btn => btn.addEventListener("click", () => select(parseInt(btn.dataset.j))));
+  document.getElementById("qact").addEventListener("click", reveal);
+}
+
+function select(j) {
+  if (revealed) return;
+  selected = j;
+  qbox.querySelectorAll(".q-opt").forEach((btn, k) => btn.classList.toggle("sel", k === j));
+  document.getElementById("qact").disabled = false;
+}
+
+function reveal() {
+  if (revealed || selected < 0) return;
+  revealed = true;
+  const item = deck[idx];
+  qbox.querySelectorAll(".q-opt").forEach((btn, k) => {
+    btn.disabled = true; btn.classList.remove("sel");
+    if (item.opts[k].ok) btn.classList.add("correct");
+    else if (k === selected) btn.classList.add("wrong");
+  });
+  if (item.opts[selected].ok) score++;
+  const exp = document.getElementById("qexp");
+  exp.textContent = item.e;
+  exp.style.display = "block";
+  qbox.querySelector(".q-progress").innerHTML = "Question " + (idx + 1) + " of " + deck.length + " &middot; Score " + score;
+  const act = document.getElementById("qact");
+  act.textContent = idx + 1 < deck.length ? "Next question" : "See results";
+  const fresh = act.cloneNode(true);
+  act.replaceWith(fresh);
+  fresh.addEventListener("click", () => { idx++; idx < deck.length ? renderQuestion() : renderResults(); });
+}
+
+function renderResults() {
+  let verdict;
+  if (score >= 9) verdict = "You can see the architecture the instruments cannot.";
+  else if (score >= 7) verdict = "Solid. You are reasoning about shape, not controls.";
+  else if (score >= 4) verdict = "The thesis is there. Walk the path once more.";
+  else verdict = "Start again from two services and one bug.";
+  qbox.innerHTML = "<div class='q-progress'>Results</div>" +
+    "<div class='q-score'>" + score + " of " + deck.length + "</div>" +
+    "<div class='q-verdict'>" + verdict + "</div>" +
+    "<button class='qbtn' id='qagain'>Try again</button>";
+  document.getElementById("qagain").addEventListener("click", startQuiz);
+}
+
+document.getElementById("qstart").addEventListener("click", startQuiz);
+</script>
+</body></html>
