@@ -223,33 +223,16 @@ FIG3 = '''
 
 md = open(SRC).read()
 
-# Title + dek live outside the markdown body.
-lines = md.split("\n")
-title = lines[0].lstrip("# ").strip()
-dek = ""
-for ln in lines[1:]:
-    if ln.startswith("### "):
-        dek = ln[4:].strip()
-        break
-body_md = md.split(dek, 1)[1].lstrip("\n") if dek else "\n".join(lines[1:])
+# Title + description live in YAML front matter.
+_fm = re.match(r"^---\n(.*?)\n---\n", md, re.S)
+if not _fm:
+    raise SystemExit("front matter not found")
+_fmtext = _fm.group(1)
+title = re.search(r"^title:\s*(.+)$", _fmtext, re.M).group(1).strip()
+dek = re.search(r"^description:\s*(.+)$", _fmtext, re.M).group(1).strip()
+body_md = md[_fm.end():].lstrip("\n")
 
-# Figure anchors.
-anchors = [
-    ("The threat model that justified the rule goes, and so does the reasoning that would tell you when the rule no longer applies.", "@@FIGH@@"),
-    ("The governance that makes the path meaningful is another.", "@@FIGA@@"),
-    ("It persists because nothing in the market currently makes the alternative visible.", "@@FIGI@@"),
-    ("**Dogma replaces optimization with classification.**", "@@FIGB@@"),
-    ("**Regressus ad infinitum.**", "@@FIGC@@"),
-    ("survives so much spending.", "@@FIG1@@"),
-    ("an interval measured in tens of minutes against a release measured in weeks is the thing defenders now have to reconsider.", "@@FIGD@@"),
-    ("That is the reasoning the control cliff destroyed, made explicit enough to compare.", "@@FIG2@@"),
-    ("**desired property \u2192 threat model \u2192 design \u2192 implementation \u2192 observation \u2192 contradiction \u2192 redesign**", "@@FIG3@@"),
-    ("Only the last step changes what the machine is for.", "@@FIGF@@"),
-]
-for needle, token in anchors:
-    if needle not in body_md:
-        raise SystemExit("anchor not found: " + needle[:40])
-    body_md = body_md.replace(needle, needle + "\n\n" + token, 1)
+# Figures are placed by explicit @@FIGnn@@ tokens in the markdown.
 
 body_md = re.sub(
     r"::: aside\n(.*?)\n:::",
@@ -273,14 +256,7 @@ body = markdown.markdown(
 )
 
 # Number the sections and drop in Part dividers.
-PARTS = {
-    1: ("I", "The Compression",
-        "We compressed judgment because it was expensive."),
-    8: ("II", "The Mismatch",
-        "Attackers never accepted the compression, and cheap reasoning enlarges the asymmetry."),
-    11: ("III", "The Representation",
-        "The way out is not better controls. It is making the original reasoning cheap enough to run again."),
-}
+PARTS = {}
 counter = {"n": 0}
 toc = []
 
@@ -303,19 +279,22 @@ def h2(m):
     return out
 
 body = re.sub(r"<h2>(.*?)</h2>", h2, body, flags=re.S)
+body = body.replace("<h3>What this post does not establish</h3>",
+    '<h3 class="tail" id="limits">What this post does not establish</h3>')
 body = body.replace("<h3>Sources</h3>", '<h3 class="tail" id="sources">Sources</h3>')
 
-for token, fig in (("@@FIGH@@", FIGH), ("@@FIGI@@", FIGI), ("@@FIGK@@", FIGK),
-                   ("@@FIGA@@", FIGA), ("@@FIGB@@", FIGB), ("@@FIGC@@", FIGC),
-                   ("@@FIG1@@", FIG1), ("@@FIGD@@", FIGD), ("@@FIGE@@", FIGE),
-                   ("@@FIG2@@", FIG2), ("@@FIG3@@", FIG3),
-                   ("@@FIGG@@", FIGG), ("@@FIGF@@", FIGF)):
+for token, fig in (("@@FIG01@@", FIGK), ("@@FIG02@@", FIGH), ("@@FIG03@@", FIGA),
+                   ("@@FIG04@@", FIGI), ("@@FIG05@@", FIGB), ("@@FIG06@@", FIGC),
+                   ("@@FIG07@@", HERO), ("@@FIG08@@", FIG1), ("@@FIG09@@", FIGD),
+                   ("@@FIG10@@", FIGE), ("@@FIG11@@", FIG2), ("@@FIG12@@", FIG3),
+                   ("@@FIG13@@", FIGG), ("@@FIG14@@", FIGF)):
     body = body.replace("<p>%s</p>" % token, fig).replace(token, fig)
 
 def toc_row(n, sid, label):
     if n == "part":
         return '<li class="toc-part"><a href="#%s">%s</a></li>' % (sid, label)
     return '<li><a href="#%s"><span class="tocnum">%d</span>%s</a></li>' % (sid, n, label)
+toc.append(("part", "limits", "What this post does not establish"))
 toc.append(("part", "sources", "Sources"))
 toc_html = "\n".join(toc_row(*row) for row in toc)
 
@@ -376,13 +355,6 @@ __CSS__
     <h1>__TITLE__</h1>
     <p class="dek">__DEK__</p>
   </div>
-
-  __HERO__
-
-  <nav class="toc" aria-label="Contents">
-    <h2>Contents</h2>
-    <ol>__TOC__</ol>
-  </nav>
 
   <article class="prose">
 __BODY__
